@@ -47,6 +47,7 @@ def progression(locale=''):
     keys = ['access_course_college','access_course_name','degree_course_name','degree_institution_name']
     res = {}
     for key in keys:
+        if 'facets' not in qry: qry['facets'] = {}
         qry['facets'][key] = {"terms":{"field":key+app.config['FACET_FIELD'],"order":'term', "size":100000}}
         r = models.Progression().query(q=qry)
         res[key] = [i.get('term','') for i in r.get('facets',{}).get(key,{}).get("terms",[])]

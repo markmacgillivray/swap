@@ -27,7 +27,7 @@ def clean(strn):
 # restrict everything in admin to logged in users who can do admin
 @blueprint.before_request
 def restrict():
-    if current_user.is_anonymous():
+    if current_user.is_anonymous:
         return redirect('/account/login?next=' + request.path)
     elif not current_user.do_admin:
         abort(401)

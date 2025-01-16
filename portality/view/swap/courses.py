@@ -18,7 +18,7 @@ def restrict():
     adminsettings = models.Account.pull(app.config['SUPER_USER'][0]).data.get('settings',{})
     if not adminsettings.get('survey',False):
         return render_template('swap/admin/closed.html')
-    if current_user.is_anonymous():
+    if current_user.is_anonymous:
         return redirect('/account/login?next=' + request.path)
     if not current_user.agreed_policy:
         return redirect('/account/policy?next=' + request.path)

@@ -20,7 +20,7 @@ blueprint = Blueprint('reports', __name__)
 # restrict everything in exports to logged in users who can view admin
 @blueprint.before_request
 def restrict():
-    if current_user.is_anonymous():
+    if current_user.is_anonymous:
         return redirect('/account/login?next=' + request.path)
     elif not current_user.view_admin:
         abort(401)

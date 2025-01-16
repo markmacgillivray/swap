@@ -18,7 +18,7 @@ blueprint = Blueprint('admin', __name__)
 # restrict everything in admin to logged in users who can view admin, and only accept posts from users that can do admin
 @blueprint.before_request
 def restrict():
-    if current_user.is_anonymous():
+    if current_user.is_anonymous:
         return redirect('/account/login?next=' + request.path)
     elif request.method == 'POST' and not current_user.do_admin:
         abort(401)

@@ -17,7 +17,7 @@ blueprint = Blueprint('account', __name__)
 
 @blueprint.route('/')
 def index():
-    if current_user.is_anonymous():
+    if current_user.is_anonymous:
         abort(401)
     if not current_user.is_super:
         return redirect('/account/' + current_user.id)

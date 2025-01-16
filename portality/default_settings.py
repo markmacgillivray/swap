@@ -41,5 +41,29 @@ MAPPINGS['schoolsubject'] = {}
 MAPPINGS['schoollevel'] = {}
 MAPPINGS['postschoollevel'] = {}
 
-UPLOAD_DATA = {} # key should match an index name above, and value should be the file location to bulk upload
-UPLOAD_EMPTY_FIRST = {} # key should match an index with value True if index should be emptied before upload - and only happens if in UPLOAD_DATA
+#UPLOAD_DATA = {} # key should match an index name above, and value should be the file location to bulk upload
+UPLOAD_DATA = {
+  #"student" : "/home/leaps/MOVE/swap/swap_student.json",
+  #"account" : "/home/leaps/MOVE/swap/swap_account.json",
+  #"course" : "/home/leaps/MOVE/swap/swap_course.json",
+  #"simd" : "/home/leaps/MOVE/swap/swap_simd.json"
+  #"progression" : "/home/leaps/MOVE/swap/swap_progression.json",
+  #"uninote" : "/home/leaps/MOVE/swap/swap_uninote.json",
+  #"archive" : "/home/leaps/MOVE/swap/swap_archive.json",
+  #"schoolsubject" : "/home/leaps/MOVE/swap/swap_schoolsubject.json",
+  #"schoollevel" : "/home/leaps/MOVE/swap/swap_schoollevel.json",
+  #"postschoollevel" : "/home/leaps/MOVE/swap/swap_postschoollevel.json"
+}
+#UPLOAD_EMPTY_FIRST = {} # key should match an index with value True if index should be emptied before upload - and only happens if in UPLOAD_DATA
+UPLOAD_EMPTY_FIRST = {
+  #"student" : True,
+  #"account" : True,
+  #"course" : True,
+  #"simd" : True
+  #"progression" : True,
+  #"uninote" : True,
+  #"archive" : True,
+  #"schoolsubject" : True,
+  #"schoollevel" : True,
+  #"postschoollevel" : True
+}

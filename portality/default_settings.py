@@ -46,7 +46,7 @@ UPLOAD_DATA = {
   #"student" : "/home/leaps/MOVE/swap/swap_student.json",
   #"account" : "/home/leaps/MOVE/swap/swap_account.json",
   #"course" : "/home/leaps/MOVE/swap/swap_course.json",
-  #"simd" : "/home/leaps/MOVE/swap/swap_simd.json"
+  #"simd" : "/home/leaps/MOVE/swap/swap_simd.json",
   #"progression" : "/home/leaps/MOVE/swap/swap_progression.json",
   #"uninote" : "/home/leaps/MOVE/swap/swap_uninote.json",
   #"archive" : "/home/leaps/MOVE/swap/swap_archive.json",

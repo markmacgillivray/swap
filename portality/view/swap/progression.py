@@ -1,9 +1,7 @@
 
-from flask import Blueprint, request, render_template, abort
-from flask.ext.login import current_user
+from flask import Blueprint, render_template, abort
 
 from portality.core import app
-from portality.view.swap.forms import dropdowns
 
 import portality.models as models
 

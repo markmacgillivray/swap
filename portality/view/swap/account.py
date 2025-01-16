@@ -118,8 +118,8 @@ class RedirectForm(Form):
         return redirect(target or url_for(endpoint, **values))
 
 class LoginForm(RedirectForm):
-    username = StringField('Username', [validators.Required()])
-    password = PasswordField('Password', [validators.Required()])
+    username = StringField('Username', [validators.InputRequired()])
+    password = PasswordField('Password', [validators.InputRequired()])
 
 @blueprint.route('/login', methods=['GET', 'POST'])
 def login():
@@ -169,7 +169,7 @@ class RegisterForm(Form):
     w = StringField('Username', [validators.Length(min=3, max=25),existscheck], description="usernames")
     n = StringField('Email Address', [validators.Length(min=3, max=35), validators.Email(message='Must be a valid email address')])
     s = PasswordField('Password', [
-        validators.Required(),
+        validators.InputRequired(),
         validators.EqualTo('c', message='Passwords must match')
     ])
     c = PasswordField('Repeat Password')

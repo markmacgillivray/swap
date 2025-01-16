@@ -527,8 +527,8 @@ class Archive(DomainObject):
 
 # The account object, which requires the further additional imports
 import portality.auth as auth
-from werkzeug import generate_password_hash, check_password_hash
-from flask.ext.login import UserMixin
+from werkzeug.security import generate_password_hash, check_password_hash
+from flask_login import UserMixin
 
 class Account(DomainObject, UserMixin):
     __type__ = 'account'

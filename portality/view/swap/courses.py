@@ -1,12 +1,10 @@
-import json
 
-from flask import Blueprint, request, flash, abort, make_response, render_template, redirect, url_for
-from flask.ext.login import current_user
+from flask import Blueprint, request, flash, abort, render_template, redirect, url_for
+from flask_login import current_user
 
 from portality.view.swap.forms import dropdowns
 from portality.core import app
 import portality.models as models
-import portality.util
 
 
 blueprint = Blueprint('courses', __name__)

@@ -1,0 +1,106 @@
+{% extends "swap/admin/admin-base.html" %}
+
+{% block content %}
+
+<link rel="stylesheet" href="/static/holder/bootstrap.3.0.3.min.css">
+
+
+<script type="text/javascript" src="/static/holder/jquery.holder.js"></script>
+<script type="text/javascript" src="/static/holder/d3.v4.min.js"></script>
+<script type="text/javascript" src="/static/holder/swap.js"></script>
+<script type="text/javascript" src="/static/holder/filters.js"></script>
+<script type="text/javascript" src="/static/holder/graph.js"></script>
+<script type="text/javascript" src="/static/holder/sankey.js"></script>
+<script type="text/javascript" src="/static/holder/scotland.js"></script>
+
+<style>
+  /* this is necessary to make sankey flows work - link means the flow links between the bars. 
+  change this to a more suitable name and decide how displays should include css and other things 
+  like custom data cleaning */
+  .link {
+    fill: none;
+    stroke: #000;
+    stroke-opacity: .2;
+  }
+  .link:hover {
+    stroke-opacity: .5;
+  }
+
+  /* this is necessary for the scotland map - have the map function define it */
+  .subunit { 
+    fill: #eee; 
+  }
+  .subunit-boundary {
+    fill: none;
+    stroke:#66bbff;
+    stroke-width:0.3px;
+    stroke-dasharray: 2,2;
+    stroke-linejoin: round;
+  }
+  .subunit-label {
+    fill: #333;
+    fill-opacity: .5;
+    font-size: 2px;
+    font-weight: 300;
+    text-anchor: middle;
+  }
+  .circle-label {
+    fill: red;
+    fill-opacity: .5;
+    font-size: 1px;
+    font-weight: 300;
+    text-anchor: middle;
+  }
+  .circle-label-campus {
+    fill: blue;
+    fill-opacity: .5;
+    font-size: 1px;
+    font-weight: 500;
+    text-anchor: middle;
+  }
+  svg .circle{
+      fill: none;
+      stroke:red;
+      stroke-width: 0.8px;
+      cursor: pointer;
+  }
+  svg .circleCampus{
+      fill: none;
+      stroke:blue;
+      stroke-width: 1px;
+      cursor: pointer;
+  }
+
+  /* this is necessary for the swap overview display */
+  .label-swap {
+    background-color:#ddd;
+    color:#555;
+    padding:3px 6px 3px 6px;
+  }
+
+  body {
+    color:#666;
+  }
+  
+  .container {
+    max-width:880px;
+  }
+
+</style>
+
+<div class="container-fluid" style="max-width:1000px;margin:10px auto 10px auto;">
+  <div class="row">
+    <div id="holder" class="col-md-12">
+    </div>
+  </div>
+</div>
+
+<script>
+jQuery(document).ready(function() {
+  $('#blueheader').remove();
+  $('.well.content').css('margin-top','0px');
+  $('#holder').holder();
+});
+</script>
+
+{% endblock %}

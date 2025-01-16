@@ -1,0 +1,30 @@
+
+server {
+    listen 80;
+    server_name swapsurvey.org www.swapsurvey.org;
+    #server_name test.swapsurvey.org;
+    rewrite ^ https://$server_name$request_uri? permanent;
+}
+
+server {
+    server_name swapsurvey.org www.swapsurvey.org;
+    #server_name test.swapsurvey.org;
+
+    access_log /var/log/nginx/swap-access.log;
+    error_log /var/log/nginx/swap-error.log;
+
+    location /static {
+        autoindex off;
+        root /home/leaps/swap/src/SWAP/portality;
+        break;
+    }
+
+    location / {
+        proxy_pass http://localhost:5006/;
+        proxy_redirect off;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    }
+
+}

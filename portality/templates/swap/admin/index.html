@@ -1,0 +1,38 @@
+{% extends "swap/admin/admin-base.html" %}
+
+{% block content %}
+
+<div class="row-fluid">
+    <div class="span6">
+
+        <div class="alert alert-info"><a class="btn btn-info" href="/admin/student">Manage registrations</a><br>to gain access to registrations submitted by students, edit or delete them, create new ones, or generate data exports.</div>
+
+        <div class="alert alert-info"><a class="btn btn-info" href="/admin/data">Manage supporting data</a><br>to gain access to course and SIMD lists that are used in dropdown lists and to populate extra data for student records.</div>
+
+        <div class="alert alert-info"><a class="btn btn-info" href="/admin/archive">Manage data archives</a><br>to move old registrations to archives and remove them from immediate displays.</div>
+
+        <div class="alert alert-info"><a class="btn btn-info" href="/admin/report">Generate reports</a><br>to explore student registration data across all current and archived years.</div>
+
+        <div class="alert alert-danger"><a class="btn btn-danger" href="/account/logout">LOGOUT OF SWAP ADMIN</a><br>You are currently logged in as {{current_user.id}}</div>
+
+    </div>
+    
+    <div class="span6">
+        <div class="alert alert-info"><a class="btn btn-info" href="/account">Manage user accounts</a><br>to control who can access the various administrative interfaces, and to set contact email addresses.</div>
+        
+        <div class="alert alert-info"><a class="btn btn-info" href="/admin/import/ucas">Use UCAS data importer</a><br>to attempt to match student registrations to UCAS numbers and to update student registrations with UCAS course applications data.</div>
+
+        <div class="alert alert-info"><a class="btn btn-info" href="/admin/import/asr">Use ASR final data importer</a><br>to attempt to match student registrations to UCAS numbers and to update student registrations with final ASR placements data.</div>
+
+        <div class="alert alert-info">
+            <a class="btn btn-info" href="/admin/import/college">Use college data importer</a> or 
+            <a class="btn btn-info" href="/admin/import/college_progression">progression importer</a> 
+            <br>to update info about what the student achieved on courses at college, or info about further college courses the student progressed to.
+        </div>
+
+        <div class="alert alert-info"><a class="btn btn-info" href="/admin/import/university">Use universities data importer</a><br>to match and upload student university progress data</div>
+
+    </div>
+
+</div>
+{% endblock %}

@@ -1,0 +1,1079 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+<script>
+jQuery(document).ready(function() {    
+
+    // manually setup parsley
+    $('#survey').parsley({
+        'validators':{
+            'ispostcode': function( val ) {
+                var checked = checkPostCode(val);
+                if (val.length == 0) {
+                    return true;
+                } else if (checked) {
+                    $('#post_code_box').val(checked);
+                    return true;
+                } else {
+                    return false;
+                };
+            }
+        },
+        'messages':{
+            'ispostcode': "",
+            'required': ""
+        }
+    });
+    
+    // add a datepicker to all datepicker classes
+    var opts = {
+        inline: true,
+        dateFormat: 'dd/mm/yy',
+        changeYear: true,
+		    yearRange: "1960:+80",
+				minDate: '-80y'
+    }
+    $('.datepicker').datepicker(opts);
+	  var dobopts = {
+        inline: true,
+        dateFormat: 'dd/mm/yy',
+        changeYear: true,
+		    yearRange: "1940:+80",
+				defaultDate: '-23y',
+				minDate: '-80y',
+				maxDate: '-12y'
+    }
+    $('.dobdatepicker').datepicker(dobopts);
+        
+    $('.select2this').select2({"width":"element"});
+
+    $('#survey').parsley('validate');
+    
+    var limitcourse = function(event) {
+        $('.courseselector').attr("disabled","disabled");
+        var url = '/stream/course/course?q=college.exact:"' + $('.collegeselector').val() + '" AND campus.exact:"' + $(this).val() + '"';
+        $.ajax({
+            method:'GET',
+            datatype:'JSON',
+            url:url,
+            obj:$(this),
+            success: function(data) {
+                var opts = '<option></option>';
+                for ( var i = 0; i < data.length; i++ ) {
+                    opts += "<option>" + data[i] + "</option>";
+                }
+                $('.courseselector').html(opts).removeAttr("disabled");
+            }
+        });
+    }
+    var limitcampus = function(event) {
+        var college = $(this).val();
+        $('.campusselector').attr("disabled","disabled");
+        $('.courseselector').attr("disabled","disabled");
+        if ( college == "" ) {
+            var campus = {{ selections.campus|tojson|safe }};
+            var opts = '<option></option>';
+            for ( var i = 0; i < campus.length; i++ ) {
+                opts += "<option>" + campus[i] + "</option>";
+            }
+            $('.campusselector').html(opts).removeAttr("disabled");
+            $('.courseselector').html(opts).removeAttr("disabled");
+        } else {
+            var url = '/stream/course/campus?q=college.exact:"' + college + '"';
+            $.ajax({
+                method:'GET',
+                datatype:'JSON',
+                url:url,
+                obj:$(this),
+                success: function(data) {
+                    var opts = '<option></option>';
+                    for ( var i = 0; i < data.length; i++ ) {
+                        opts += "<option>" + data[i] + "</option>";
+                    }
+                    $('.campusselector').html(opts).removeAttr("disabled");
+                }
+            });
+        }
+    }
+    $('.collegeselector').bind('change',limitcampus);
+    $('.campusselector').bind('change',limitcourse);
+
+    // function of things to do whenever a row is appended
+    var preprow = function(row) {
+        $(row).find('.delete-row').bind('click',deleterow);
+        $(row).find('select').val("");
+        $(row).find('input').val("");
+        $(row).find('textarea').html("");
+        $(row).find('.datepicker').datepicker("destroy");
+        $(row).find('.datepicker').removeClass("hasDatepicker").removeAttr('id');
+        $(row).find('.datepicker').datepicker(opts);
+    }
+
+    // add / remove rows to list items
+    $('table.multi').find('tbody').children('tr').each(function() {
+        $(this).children('td').first().prepend('<a class="btn btn-warning delete-row" style="margin:-10px 2px 0 0;" href="#">delete</a>').children('select, input').addClass('narrow');
+    });
+    $('table.multi').find('tbody').append('<tr><td><a class="btn btn-success add-row" href="#">add</a></td></tr>');
+    var addrow = function(event) {
+        event.preventDefault();
+        $(this).closest('tr').siblings().length == 5 ? $(this).hide() : false;
+        if ( $(this).closest('tr').siblings().length < 6 ) {
+            var row = $(this).closest('tr').prev().clone(true).get(0);
+            $(row).find('.noclone').remove();
+            $(row).insertBefore($(this).closest('tr'));
+            preprow(row);
+        }
+    }
+    $('.add-row').bind('click',addrow);
+    var deleterow = function(event) {
+        event.preventDefault();
+        var row = $(this).closest('tr').clone(true).get(0);
+        $(this).closest('tr').siblings().length == 6 ? $(this).closest('tr').siblings().find('.add-row').show() : false;
+        if ( $(this).closest('tr').siblings().length == 1 ) {
+            $(row).find('.noclone').remove();
+            $(row).insertBefore($(this).closest('tr'));
+            preprow(row);
+        }
+        $(this).closest('tr').remove();
+    }
+    $('.delete-row').bind('click',deleterow);
+
+    var triggersave = function(event) {
+        if ( !$('#survey').parsley('validate') ) {
+            event.preventDefault();
+            $('.activealert').show();
+        }
+    };
+    $('#triggersave').bind('click',triggersave);
+
+    // block an enter keypress from submitting the form
+    $("form").bind("keypress", function (event) {
+        var key = event.keyCode ? event.keyCode : event.which ? event.which : event.charCode;
+        if (key == 13) {
+            return false;
+        }
+    });
+    
+    // when an input box is entered, remove the placeholder. This used to work automatically, 
+    // but for some reason stupid browsers now leave it there
+    $('input[placeholder]').bind("focus",function() { $(this).removeAttr('placeholder'); });
+
+    var pchelp = function(event) {
+        event.preventDefault();
+        $('.pchelp').toggle();
+    }
+    $('#pchelp').bind('click',pchelp);
+
+	$('#gender').bind('change',function(e) {
+	   $('#gender_other').val('');
+	   $('#show_gender_other').hide();
+	   if ( $('#gender').val() == 'Other' ) $('#show_gender_other').show();
+	});
+
+});
+</script>
+
+<style>
+.part .well{
+    margin-top:20px;
+}
+.narrow{
+    width:180px;
+}
+.narrow.datepicker{
+    width:100px;
+}
+input, textarea {
+    width:200px;
+}
+select {
+    width:210px;
+}
+.add-row, .delete-row {
+    width:35px;
+}
+textarea.bigfield{
+    width:400px;
+    height:150px;
+}
+input.bigfield{
+    width:360px;
+    height:150px;
+}
+.select2this{
+    width:400px;
+}
+</style>
+
+<form action="" id="survey" name="survey" method="post">
+<fieldset>
+    <legend></legend>
+
+
+<!-- the intro part -->
+<div class="part intro">
+
+	<div class="row-fluid">
+	    <div class="span12">
+	        <div class="well">
+	            <h2>Welcome to the SWAP registration form</h2>
+	        </div>
+	    </div>
+	</div>
+
+	<div class="row-fluid">
+	    <div class="span12">
+	        <p><strong>DO NOT CLOSE YOUR BROWSER WHILST COMPLETING THE FORM.</strong></p>
+	        <p>Only students on <strong>SWAP programmes</strong> should complete this form.</p>
+	        <p>Please complete all sections which are relevant to you.</p>
+	        <p>All sections with an asterisk <b>* must</b> be completed otherwise it will not be possible to submit.</p>
+            <p>If you need support with completing this form, please do not hesitate to get in touch with your regional SWAP office:</p>
+            <p>SWAP West: <a href="mailto:swapwest@gmail.com">swapwest@gmail.com</a></p>
+            <p>SWAP East: <a href="mailto:swapeast@ed.ac.uk">swapeast@ed.ac.uk</a></p>
+
+            <p>
+	            Your responses will only be saved when you reach the end of the form and press the submit button.
+	            Once you have submitted, changes cannot be made. If you have filled in any section incorrectly, 
+	            please contact your SWAP office and they will help you.
+            </p>
+        </div>
+	</div>
+
+</div>
+
+
+
+<!-- the student details page -->
+<div class="part student">
+
+	<div class="row-fluid">
+	    <div class="span12">
+	        <div class="well">
+	            <h2>Your details</h2>
+	        </div>
+	    </div>
+	</div>
+
+	<div class="row-fluid">
+	    <div class="span12">		
+	        <table>
+	            <tbody>
+        	        <tr>
+	                    <td style="text-align:right;padding:6px 10px 0 0;"><label for="first_name">First name</label></td>
+                		<td><input type="text" id="first_name" name="first_name" data-required="true" tabindex=1></td>
+
+	                    <td style="text-align:right;padding:6px 10px 0 0;"><label for="email">Email address</label></td>
+                		<td><input type="text" id="email" name="email" data-type="email" data-required="true" data-trigger="keyup focusout" tabindex=9></td>
+                    </tr>
+        	        <tr>
+	                    <td style="text-align:right;padding:6px 10px 0 100px;"><label for="last_name">Last name</label></td>
+                		<td><input type="text" id="last_name" name="last_name" data-required="true" tabindex=2></td>
+
+	                    <td style="text-align:right;padding:6px 10px 0 0;"><label for="home_phone">Home phone</label></td>
+                		<td><input type="text" id="home_phone" name="home_phone" tabindex=10 data-type="phone"></td>
+                    </tr>
+        	        <tr>
+	                    <td style="text-align:right;padding:6px 10px 0 0;"><label for="date_of_birth">Date of birth</label></td>
+                		<td><input type="text" id="date_of_birth" class="dobdatepicker" name="date_of_birth" data-required="true" data-trigger="keyup change focusout" tabindex=3></td>
+
+	                    <td style="text-align:right;padding:6px 10px 0 0;"><label for="mobile_phone">Mobile phone</label></td>
+                		<td><input type="text" id="mobile_phone" name="mobile_phone" tabindex=11 data-type="phone"></td>
+                    </tr>
+        	        <tr>
+	                    <td style="text-align:right;padding:6px 10px 0 100px;"><label for="gender">Gender</label></td>
+                		<td>
+                		    <select id="gender" name="gender" tabindex=4>
+                		        <option></option>
+                		        <option value="Male">Male</option>
+                		        <option value="Female">Female</option>
+                		        <option value="Other">Identify in another way</option>
+                		        <option value="Prefer not to say">Prefer not to say</option>
+                		    </select>
+                		    <p id="show_gender_other" style="display:none">
+            		        <label for="gender_other">If you want to tell us how you identify your gender, please enter it here, 
+            		        or leave blank and we will simply record it as "Other":</label> <br>
+                		    <input type="text" class="form-control" id="gender_other" name="gender_other">
+                    		</p>
+                		</td>
+
+	                    <td style="text-align:right;padding:6px 10px 0 100px;"><label for="address_line_1">Address</label></td>
+                		<td><input type="text" id="address_line_1" name="address_line_1" tabindex=12></td>
+                    </tr>
+        	        <tr>
+	                    <td style="text-align:right;padding:6px 10px 0 0;"><label for="college">College</label></td>
+                		<td><select id="college" name="college" data-required="true" tabindex=5 class="collegeselector">
+                		    <option></option>
+                		    {% for opt in selections.colleges %}
+                		        <option>{{ opt }}</option>
+                		    {% endfor %}
+                		</select></td>
+
+	                    <td style="text-align:right;padding:6px 10px 0 100px;"><label for="address_line_2">...</label></td>
+                		<td><input type="text" id="address_line_2" name="address_line_2" tabindex=13></td>
+                    </tr>
+        	        <tr>
+	                    <td style="text-align:right;padding:6px 10px 0 0;"><label for="campus">Campus</label></td>
+                		<td><select id="campus" name="campus" data-required="true" tabindex=6 class="campusselector">
+                		    <option></option>
+                		    {% for opt in selections.campus %}
+                		        <option>{{ opt }}</option>
+                		    {% endfor %}
+                		</select></td>
+
+	                    <td style="text-align:right;padding:6px 10px 0 100px;"><label for="city">Town / city</label></td>
+                		<td><input type="text" id="city" name="city" tabindex=14></td>
+                    </tr>
+        	        <tr>
+	                    <td style="text-align:right;padding:6px 10px 0 100px;"><label for="course">Course</label></td>
+                		<td><select id="course" name="course" data-required="true" tabindex=7 class="courseselector">
+                		    <option></option>
+                		    {% for opt in selections.courses %}
+                		        <option>{{ opt }}</option>
+                		    {% endfor %}
+                		</select></td>
+
+	                    <td style="text-align:right;padding:6px 10px 0 100px;">
+	                        <p><label for="post_code_box">Post code</label> <a href="#" id="pchelp">**</a><br>
+	                        <span class="pchelp" style="display:none;">
+	                        Post codes are required.<br>
+	                        If you don't know, use<br> 
+                		    <a target="_blank" href="http://www.royalmail.com/postcode-finder">RoyalMail postcode finder</a> 
+                		    </span></p>
+	                    </td>
+                		<td>
+                		    <input id="post_code_box" type="text" name="post_code" required="true" data-ispostcode="true" tabindex=15>
+                		</td>
+                    </tr>
+        	        <tr>
+        	            <td style="text-align:right;padding:6px 10px 0 0;">
+	                        <p><label for="travel">How many miles do you travel to
+	                        <br>college? Please provide an estimate<br>
+	                        of the distance in <strong>one</strong> direction</label></p>
+        	            </td>
+        	            <td>
+                	        <select id="travel" name="travel" tabindex=8>
+                                <option></option>
+                                <option>1</option>
+                                <option>2</option>
+                                <option>3</option>
+                                <option>4</option>
+                                <option>5</option>
+                                <option>6</option>
+                                <option>7</option>
+                                <option>8</option>
+                                <option>9</option>
+                                <option>10</option>
+                                <option>11</option>
+                                <option>12</option>
+                                <option>13</option>
+                                <option>14</option>
+                                <option>15</option>
+                                <option>16</option>
+                                <option>17</option>
+                                <option>18</option>
+                                <option>19</option>
+                                <option>20</option>
+                                <option>21</option>
+                                <option>22</option>
+                                <option>23</option>
+                                <option>24</option>
+                                <option>25</option>
+                                <option>26</option>
+                                <option>27</option>
+                                <option>28</option>
+                                <option>29</option>
+                                <option>30</option>
+                                <option>31</option>
+                                <option>32</option>
+                                <option>33</option>
+                                <option>34</option>
+                                <option>35</option>
+                                <option>36</option>
+                                <option>37</option>
+                                <option>38</option>
+                                <option>39</option>
+                                <option>40</option>
+                                <option>41</option>
+                                <option>42</option>
+                                <option>43</option>
+                                <option>44</option>
+                                <option>45</option>
+                                <option>46</option>
+                                <option>47</option>
+                                <option>48</option>
+                                <option>49</option>
+                                <option>50</option>
+                	        </select>
+        	            </td>
+
+	                    <td style="text-align:right;padding:6px 10px 0 100px;"><label for="nationality">Your nationality</label></td>
+                		<td><select id="nationality" name="nationality" tabindex=16>
+                                    <option></option>
+                                    <option>Scottish</option>
+                                    <option>English</option>
+                                    <option>Welsh</option>
+                                    <option>Irish</option>
+                                    <option>Northern Irish</option>
+
+                                    <option>African country</option>
+                                    <option>Asian (other than countries listed)</option>
+                                    <option>Austrian</option>
+                                    <option>Bangladeshi</option>
+									<option>Belgian</option>
+                                    <option>Bulgarian</option>
+                                    <option>Czech</option>
+                                    <option>Dutch</option>
+                                    <option>Estonian</option>
+                                    <option>European (other than countries listed)</option>
+                                    <option>French</option>
+                                    <option>German</option>
+                                    <option>Greek</option>
+                                    <option>Hungarian</option>
+                                    <option>Indian</option>
+                                    <option>Italian</option>
+                                    <option>Latvian</option>
+									<option>Lithuanian</option>
+                                    <option>Pakistani</option>
+                                    <option>Polish</option>
+                                    <option>Portuguese</option>
+                                    <option>Romanian</option>
+                                    <option>Slovakian</option>
+                                    <option>Slovenian</option>
+                                    <option>Spanish</option>
+
+                                    <option>Other</option>
+                                </select></td>
+                    </tr>
+                    <tr>
+	                    <td style="text-align:right;padding:6px 10px 0 0;">
+	                        <label for="data_policy_agreement">I agree</label> to the <br>
+                            <a target="_blank" href="/policy">SWAP data policy</a>
+	                    </td>
+                		<td><select id="data_policy_agreement" name="data_policy_agreement" data-required="true" tabindex=17>
+                		    <option></option>
+                		    <option>Yes</option>
+                		</select></td>
+        	            
+        	            <td colspan="2" style="padding:6px 0 0 10px;">You must 
+        	            agree before submitting. 
+                        </td>
+                    </tr>
+                </tbody>
+	        </table>
+	    </div>
+	</div>
+
+</div>
+
+
+
+        
+
+
+
+<!-- the education page -->
+<div class="part education">
+
+	<div class="row-fluid">
+	    <div class="span12">
+	        <div class="well">
+	            <h2>Qualifications information</h2>
+    				<p>
+    					<b>In the section below please tell us about any existing qualifications you have. Click on the ADD button to enter more subjects.<br>
+    					You MUST complete this section.</b><br>
+    					<b style="color:red;">If you have any experience of full-time university level study, please contact the SWAP office.</b>
+    				</p>
+	        </div>
+	    </div>
+	</div>
+
+	<div class="row-fluid">
+	    <div class="span12">
+	        <div class="well">
+				<h3>Education to Date: School Qualifications including any non-UK Qualifications</h3>
+				<p>There is a maximum of 6 boxes, please add your highest level of qualifications and your most recent.</p>
+	        </div>
+	    </div>
+	</div>
+
+	<div class="row-fluid">
+	    <div class="span12">		
+	        <table class="multi manyrows">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Level of qualification</th>
+                        <th>Grade (if applicable)</th>
+                        <th>Date</th>
+                        <th>Full time / Part time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                		<td><select name="school_qualification_subject">
+                		    <option></option>
+                		    {% for opt in selections.school_subjects %}
+                		        <option>{{ opt }}</option>
+                		    {% endfor %}
+                		</select></td>
+                		<td><select name="school_qualification_level" style="width:150px;">
+                		    <option></option>
+                		    {% for opt in selections.school_levels %}
+                		        <option>{{ opt }}</option>
+                		    {% endfor %}
+                		</select></td>
+                		<td><input type="text" name="school_qualification_grade" style="width:100px;"></td>
+                		<td>
+							<input type="text" class="datepicker" name="school_qualification_date" data-trigger="keyup change focusout">
+                		</td>
+                		<td><select name="school_qualification_ftpt" style="width:100px;">
+                		    <option></option>
+                		    <option>Full time</option>
+                		    <option>Part time</option>
+                		</select></td>
+                    </tr>
+                </tbody>
+	        </table>
+	    </div>
+	</div>
+
+	<div class="row-fluid">
+	    <div class="span12">
+					<p>
+						<input type="checkbox" id="no_school_quals" name="no_school_quals">
+						<label for="no_school_quals">I do not hold any qualifications from school</label>
+					</p>
+			</div>
+	</div>
+
+	<div class="row-fluid">
+	    <div class="span12">
+	        <div class="well">
+							<h3>Post School Qualifications including college, university or work-based</h3>
+	        </div>
+	    </div>
+	</div>
+
+	<div class="row-fluid">
+	    <div class="span12">		
+	        <table class="multi manyrows">
+                <thead>
+                    <tr>
+                        <th>Subject</th>
+                        <th>Level of qualification</th>
+                        <th>Grade (if applicable)</th>
+                        <th>Date</th>
+                        <th>Full time / Part time</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                		<td><input type="text" name="post_school_qualification_subject"></td>
+                		<td><select name="post_school_qualification_level" style="width:150px;">
+                		    <option></option>
+                		    {% for opt in selections.post_school_levels %}
+                		        <option>{{ opt }}</option>
+                		    {% endfor %}
+                		</select></td>
+                		<td><input type="text" name="post_school_qualification_grade" style="width:100px;"></td>
+                		<td>
+							<input type="text" class="datepicker" name="post_school_qualification_date" data-trigger="keyup change focusout">
+                		</td>
+                		<td><select name="post_school_qualification_ftpt" style="width:100px;">
+                		    <option></option>
+                		    <option>Full time</option>
+                		    <option>Part time</option>
+                		</select></td>
+                    </tr>
+                </tbody>
+	        </table>
+	    </div>
+	</div>
+
+	<div class="row-fluid">
+	    <div class="span12">
+					<p>
+						<input type="checkbox" id="no_post_school_quals" name="no_post_school_quals">
+						<label for="no_post_school_quals">I have not achieved any qualifications post school</label>
+					</p>
+			</div>
+	</div>
+
+	<div class="row-fluid">
+	    <div class="span12">		
+	        <table>
+	            <tbody>
+									<tr>
+											<td style="text-align:right;padding:6px 10px 0 0;">
+													<label for="last_ft_education">Around what date were you last in full time education? (do not include your current study)</label>
+											</td>
+											<td><input type="text" class="datepicker" id="last_ft_education" name="last_ft_education" data-trigger="keyup change focusout"></td>
+									</tr>
+							</tbody>
+					</table>
+			</div>
+	</div>
+
+	<div class="row-fluid">
+	    <div class="span12">		
+          <p><strong>Does any member of your family have any of the following qualifications?</strong></p>
+	        <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Qualification</th>
+                        <th>Parents / guardians</th>
+                        <th>Siblings</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr>
+                        <td>HNC</td>
+                        <td><input type="checkbox" name="parents_with_hnc"></td>
+                        <td><input type="checkbox" name="siblings_with_hnc"></td>
+                    </tr>
+                    <tr>
+                        <td>HND</td>
+                        <td><input type="checkbox" name="parents_with_hnd"></td>
+                        <td><input type="checkbox" name="siblings_with_hnd"></td>
+                    </tr>
+                    <tr>
+                        <td>Degree</td>
+                        <td><input type="checkbox" name="parents_with_degree"></td>
+                        <td><input type="checkbox" name="siblings_with_degree"></td>
+                    </tr>
+                </tbody>
+	        </table>            
+	    </div>
+	</div>
+
+</div>
+
+
+
+
+
+
+
+<!-- the situation page -->
+<div class="part situation">
+
+	<div class="row-fluid">
+	    <div class="span12">
+	        <div class="well">
+	            <h2>About your situation</h2>
+	        </div>
+	    </div>
+	</div>
+
+	<div class="row-fluid">
+	    <div class="span12">		
+	        <table>
+	            <tbody>
+                    <tr>
+                        <td>
+                            <p><strong><label for="residency">Can you please advise of your residency status in the UK?</label>
+                            </strong></p>
+                        </td>
+                        <td>
+                            <select id="residency" name="residency">
+                                <option value="">choose one</option>
+                                <option>UK, EU/EEA citizen</option>
+                                <option>Refugee</option>
+                                <option>Asylum seeker</option>
+                            </select>
+                            <br><input type="checkbox" id="veteran" name="veteran">
+                            <label for="veteran">Have you served any time in the armed forces?</label>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+
+	        <p><strong>Do you have dependent children or adults? If so, enter the number of each below.</strong></p>
+	        <table>
+	            <tbody>
+        	        <tr>
+	                    <td style="text-align:right;padding:6px 10px 0 0;"><label for="dependents_pre_school_children">Pre-school aged children</label></td>
+                		<td>
+                	        <select id="dependents_pre_school_children" name="dependents_pre_school_children">
+                                <option></option>
+                                <option>1</option>
+                                <option>2</option>
+                                <option>3</option>
+                                <option>4</option>
+                                <option>5</option>
+                                <option>&gt;5</option>
+                	        </select>
+                		</td>
+
+	                    <td style="text-align:right;padding:6px 10px 0 100px;"><label for="dependents_secondary_school_children">Secondary school aged children</label></td>
+                		<td>
+                	        <select id="dependents_secondary_school_children" name="dependents_secondary_school_children">
+                                <option></option>
+                                <option>1</option>
+                                <option>2</option>
+                                <option>3</option>
+                                <option>4</option>
+                                <option>5</option>
+                                <option>&gt;5</option>
+                	        </select>
+                		</td>
+                    </tr>
+        	        <tr>
+	                    <td style="text-align:right;padding:6px 10px 0 0;"><label for="dependents_primary_school_children">Primary school aged children</label></td>
+                		<td>
+                	        <select id="dependents_primary_school_children" name="dependents_primary_school_children">
+                                <option></option>
+                                <option>1</option>
+                                <option>2</option>
+                                <option>3</option>
+                                <option>4</option>
+                                <option>5</option>
+                                <option>&gt;5</option>
+                	        </select>
+                		</td>
+
+	                    <td style="text-align:right;padding:6px 10px 0 100px;"><label for="dependents_adults">Dependent adults (relatives/friends)</label></td>
+                		<td>
+                	        <select id="dependents_adults" name="dependents_adults">
+                                <option></option>
+                                <option>1</option>
+                                <option>2</option>
+                                <option>3</option>
+                                <option>4</option>
+                                <option>5</option>
+                                <option>&gt;5</option>
+                	        </select>
+                		</td>
+                    </tr>
+                </tbody>
+            </table>
+				<p>
+					<label for="single_parent">Are you a single parent? If so tick here:</label> <input type="checkbox" id="single_parent" name="single_parent">
+				</p>
+	    </div>
+	</div>
+
+
+        
+<hr></hr>
+
+	<div class="row-fluid">
+	    <div class="span12">		
+	        <table class="table">
+                <tr>
+                    <td>
+                        <p><strong><label for="situation">Which of these best describes your situation immediately
+	        prior to starting your access programme?</label></strong> <br>Click in the box to see options.</p>
+                    </td>
+                    <td>
+                        <select id="situation" name="situation" multiple="multiple" class="select2this" placeholder="select all that apply">
+                            <option></option>
+                            <option>Employed full time</option>
+                            <option>Employed part time</option>
+                            <option>Student full time</option>
+                            <option>Student part time</option>
+                            <option>Caring for family</option>
+                            <option>Caring (other)</option>
+                            <option>Unemployed</option>
+                            <option>Other</option>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <p><strong><label for="main_occupation">What was your main occupation over the last two years (if applicable)?</label></strong></p>
+                    </td>
+                    <td>
+                        <input type="text" id="main_occupation" name="main_occupation" placeholder="type your occupation here">
+                    </td>
+                </tr>
+                
+                <tr>
+                    <td>
+                        <p><strong><label for="funding">What financial support will you receive while you 
+                        are on a SWAP Programme?</label></strong> <br>Click in the box to see options.</p>
+                    </td>
+                    <td>
+                        <select id="funding" name="funding" multiple="multiple" class="select2this" placeholder="select all that apply">
+                            <option></option>
+                            <option>College bursary</option>
+                            <option>College (other)</option>
+                            <option>Benefits</option>
+                            <option>Full-time job</option>
+                            <option>Part-time job</option>
+                            <option>Family</option>
+                            <option>Bank loan</option>
+                            <option>None</option>
+                            <option>Other</option>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <p><strong><label for="ethnicity">Please tell us about your ethnic background.</label>
+                        </strong><br>This information is collected in accordance 
+                        with the code of practice issued by the Commission for 
+                        Racial Equality.</p>
+                    </td>
+                    <td>
+                        <select id="ethnicity" name="ethnicity">
+                            <option value="">choose one</option>
+                            
+                            <optgroup label="White">
+                                <option>Scottish</option>
+                                <option>Other British</option>
+                                <option>European Union</option>
+                                <option>Gypsy – Traveller or Irish Traveller</option>
+                                <option>Any other White background</option>
+                            </optgroup>
+
+                            <optgroup label="Asian, Asian Scottish, Asian British">
+                                <option>Indian</option>
+                                <option>Pakistani</option>
+                                <option>Bangladeshi</option>
+                                <option>Chinese</option>
+                                <option>Any other Asian background</option>
+                            </optgroup>
+
+                            <optgroup label="Black, Black Scottish, Black British">
+                                <option>Caribbean</option>
+                                <option>African</option>
+                                <option>Any other Black background</option>
+                            </optgroup>
+
+                            <optgroup label="Arab">
+                                <option>Arab</option>
+                            </optgroup>
+                            
+                            <optgroup label="Other ethnic background">
+                                <option>Mixed White and Black Caribbean</option>
+                                <option>Mixed White and Black African</option>
+                                <option>Mixed White and Asian</option>
+                                <option>Other Mixed Background</option>
+                                <option>Any other background</option>
+                                <option>I prefer not to say</option>
+                            </optgroup>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <p><strong><label for="disability">Please tell us about any disabilities you 
+                        have.</label></strong><br>This information is collected in 
+                        accordance with the code of practice issued by the 
+                        Disability Discrimination Act. Click in the box to see options.</p>
+                    </td>
+                    <td>
+                        <select id="disability" name="disability" multiple="multiple" class="select2this" placeholder="select all that apply">
+                            <option></option>
+                            <option>No known disability</option>
+                            <option>Multiple disabilities</option>
+                            <option>Dyslexia</option>
+                            <option>Autistic Spectrum</option>
+                            <option>Mental Health</option>
+                            <option>Personal care support</option>
+                            <option>Unseen disability e.g. asthma, cancer, HIV, diabetes</option>
+                            <option>Wheelchair user/mobility difficulties</option>
+                            <option>Deaf/hearing impairment</option>
+                            <option>Blind/partially sighted</option>
+                            <option>Other</option>
+                        </select>
+                        <br><input type="checkbox" id="registered_disabled" name="registered_disabled">
+                        <label for="registered_disabled">Tick if registered disabled</label>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <p><strong><label for="local_authority_care">If you were in Local Authority care, please indicate for how 
+                        long</label></strong><br>
+                        This information will be used for research purposes 
+                        only and, if released, will not be in an identifiable 
+                        form.</p>
+                    </td>
+                    <td>
+                        <select id="local_authority_care" name="local_authority_care">
+                            <option value="">choose one</option>
+                            <option>Less than 1 week</option>
+                            <option>1 week to 3 months</option>
+                            <option>3 months to 1 year</option>
+                            <option>1 year to 3 years</option>
+                            <option>3 years or more</option>
+                        </select>
+                    </td>
+                </tr>
+
+	        </table>
+	    </div>
+	</div>
+</div>
+
+
+    
+    
+    
+    
+<!-- the mentoring page -->
+<!--
+<div class="part mentoring">
+
+	<div class="row-fluid">
+	    <div class="span12">
+	        <div class="well">
+	            <h2>Mentoring</h2>
+	        </div>
+	    </div>
+	</div>
+
+	<div class="row-fluid">
+	    <div class="span12">		
+            <table class="table">
+                <tr>
+                    <td>
+                        <p><strong>If it was possible, would you be interested in getting some guidance &amp; support from SWAP students already at university?</strong><br>
+												For more information on this, <a href="http://www.scottishwideraccess.org/east-current-students-mentoring">please click to read our Mentoring information</a></p>
+                    </td>
+                    <td>
+                        <select name="mentorrequest">
+                            <option></option>
+                            <option>No</option>
+                            <option>Yes</option>
+                        </select>
+                    </td>
+                </tr>-->
+							  <!--
+                <tr>
+                    <td>
+                        <p><strong>Are you interested in becoming a mentor?</strong><br>
+                        If so please select the sorts of support you are willing to offer. Click in the box to see options.</p>
+                    </td>
+                    <td>
+                        <select name="mentoroffer" multiple="multiple" class="select2this" placeholder="select all that apply">
+                            <option></option>
+                            <option>Dealing with money / finances</option>
+                            <option>Family issues</option>
+                            <option>Time management skills / tips</option>
+                            <option>Academic issues (including university course choices)</option>
+                            <option>Social issues</option>
+                            <option>General support</option>
+                            <option>Other</option>
+                        </select>
+                    </td>
+                </tr>
+								-->
+            <!--</table>
+        </div>
+    </div>
+</div>-->
+
+    
+
+    
+<!-- the marketing page -->
+<div class="part marketing">
+
+	<div class="row-fluid">
+	    <div class="span12">
+	        <div class="well">
+	            <h2>About SWAP</h2>
+	        </div>
+	    </div>
+	</div>
+
+	<div class="row-fluid">
+	    <div class="span12">		
+	        <table class="table">
+                <tr>
+                    <td>
+                        <p><strong><label for="why_on_swap">Why did you enrol on a SWAP Access programme?</label>
+                        </strong></p>
+                    </td>
+                    <td>
+                        <select id="why_on_swap" name="why_on_swap">
+                            <option></option>
+                            <option>To get back into learning</option>
+                            <option>To do a specific qualification (e.g. Nursing)</option>
+                            <option>Improve / change career / job prospects</option>
+                            <option>To go further in college</option>
+                            <option>To go to University</option>
+                            <option>Other</option>
+                        </select>
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        <p><strong><label for="where_heard_about">Where did you first hear about the programme?</label>
+                        </strong></p>
+                    </td>
+                    <td>
+                        <select id="where_heard_about" name="where_heard_about">
+                            <option></option>
+                            <option>Newspaper / advert</option>
+                            <option>Leaflet</option>
+                            <option>College website</option>
+                            <option>SWAP website</option>
+                            <option>Internet / other website</option>
+                            <option>Social media e.g. Facebook, Twitter</option>
+                            <option>Community group</option>
+                            <option>Friend / family</option>
+                            <option>Careers adviser</option>
+                            <option>SWAP office</option>
+                            <option>College</option>
+                            <option>University</option>
+                        </select>
+                    </td>
+                </tr>
+            </table>
+        </div>
+    </div>
+</div>
+
+
+
+
+<hr>
+    
+    
+    
+
+
+<!-- the form submission button -->
+<div class="part submit">
+
+	<div class="row-fluid" style="margin-top:30px;">
+			<div class="span6">
+				<p>
+					<input type="checkbox" id="confirm_true" name="confirm_true" data-required="true">
+					<b><label for="confirm_true">I confirm that the information given on this form is true, complete and accurate and no information has been omitted.</label></b>
+				</p>
+			</div>
+	    <div class="span6">
+	        <div class="alert alert-success">
+            	<input id="triggersave" class="btn btn-success span2" style="margin-left:100px;" type="submit" name="submit" value="Submit your registration" />
+	        </div>
+	    </div>
+	    <div class="span6">
+	        <div class="activealert alert alert-warning clearfix" style="display:none;">
+	            <p>There were errors with your responses. Please ensure all boxes in red have been completed correctly. Once correct, please re-submit.</p>
+	        </div>
+	    </div>
+    </div>
+
+</div>
+
+
+
+
+</fieldset>
+</form>
+
+{% endblock %}
+
+
+    
+

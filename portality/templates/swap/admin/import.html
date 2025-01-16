@@ -1,0 +1,135 @@
+{% extends "swap/admin/admin-base.html" %}
+
+{% block content %}
+
+<script>
+jQuery(document).ready(function() {
+
+    var unis = function(event) {
+        $('.choicedrops').val("").hide();
+        var t = $(this).val();
+        if ( t == 'applications' ) {
+            $('#appns').show();
+        } else if ( t == 'progressions' ) {
+            $('#progs').show();
+        }
+    }
+    $('#exportwhat').bind('change',unis);
+
+})
+</script>
+
+{% if updates or failures or stayedsame %}
+
+<div class="row-fluid" style="margin-bottom:10px;">
+    <div class="span4">
+    {% for failure in failures %}
+        <p class="alert alert-info">{{ failure|safe }}</p>
+    {% endfor %}
+    </div>
+    
+    <div class="span4">
+    {% for update in updates %}
+        <p class="alert alert-success">{{ update|safe }}</p>
+    {% endfor %}
+    </div>
+
+    <div class="span4">
+    {% for ss in stayedsame %}
+        <p class="alert alert-success">{{ ss|safe }}</p>
+    {% endfor %}
+    </div>
+
+</div>
+
+{% else %}
+
+{% if model == "university" %}
+<div class="row-fluid" style="margin-bottom:10px;">
+    <div class="span12">
+        <h1>Export university applications / progressions lists</h1>
+        <p>You can export a list of students that have applied to a given university, or a list of students that are already known to have progressed onto a course at a given university, so that you can send the list to the university in question to retrieve further progression data. If you require a more customised list, use the <a href="/admin/student">Manage registrations</a> page to filter a custom list and export it.</p>
+        <form action="" method="POST">
+            <p>Do you want to export students who have applied to university, or who are progressing at a university?
+                <select name="exportwhat" id="exportwhat">
+                    <option></option>
+                    <option>applications</option>
+                    <option>progressions</option>
+                </select>
+            </p>
+            <p class="choicedrops" id="appns" style="display:none;">For which university do you wish to export applicants? 
+                <select name="appnsuniversity">
+                    <option></option>
+                    {% for uni in appn_unis %}
+                    <option>{{uni}}</option>
+                    {% endfor %}
+                </select>
+            </p>
+            <p class="choicedrops" id="progs" style="display:none;">For which university do you wish to export students? 
+                <select name="progsuniversity">
+                    <option></option>
+                    {% for uni in prog_unis %}
+                    <option>{{uni}}</option>
+                    {% endfor %}
+                </select>
+            </p>
+            <p><input class="btn" type="submit" name="submit" value="Export the university list"></p>
+        </form>
+    </div>
+</div>
+<hr></hr>
+{% endif %}
+
+<div class="row-fluid" style="margin-bottom:10px;">
+    <div class="span12">
+        {% if model %}
+        <h1>Import {{model}} records</h1>
+        {% else %}
+        <h1>Import supporting data records</h1>
+        {% endif %}
+    </div>
+</div>
+
+<div class="row-fluid">
+    <div class="span12">
+
+        {% if not model %}
+        <p>Which type of data do you want to import?</p>
+        <ul>
+        <li><a href="college">college</a></li>
+        <li><a href="college_progression">college_progression</a></li>
+        <li><a href="university">university</a></li>
+        <li><a href="simd">SIMD</a></li>
+        </ul>
+        
+        {% else %}
+
+        <p>You have chosen to upload some records into the {{ model }} dataset.</p>
+        <p>Your upload file must be a comma separated value list (.csv) &mdash; software such as MS Excel can save spreadsheets as this type &mdash; or a JSON file.</p>
+
+        <form action="" method="post" enctype="multipart/form-data">
+        {% if model == 'progression' %}
+        <div class="well">
+        <p>By default, when uploading a file of progression records, any with a swap_id will overwrite the version already in the database, 
+        whilst any without a swap_id will create a new record. Any records with a swap_id and swap_delete of "delete" will be deleted.
+        Alternatively you can choose to delete ALL progression records in the database, so that only the records in the file to be 
+        uploaded will exist once the process is complete:</p> 
+        <p><input type="checkbox" name="overwrite"> Delete all progression records before uploading the new form</p>
+        <p>Or just delete all East progressions:</p>
+        <p><input type="checkbox" name="overwrite_east"> Delete all East progression records before uploading the new form</p>
+        <p>Or just delete all West progressions:</p>
+        <p><input type="checkbox" name="overwrite_west"> Delete all West progression records before uploading the new form</p>
+        </div>
+        {% endif %}
+        <p><input type="file" name="upfile"></p>
+        <p><input class="btn" type="submit" name="submit" value="Import" /></p>
+        </form>
+        {% endif %}
+
+
+    </div>
+  </div>
+
+{% endif %}
+
+{% endblock %}

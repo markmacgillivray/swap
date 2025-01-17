@@ -72,11 +72,8 @@ def student():
 
     if request.method == 'POST':
         student = models.Student()
-        print('saving...')
         student.save_from_form(request)
-        print('saved from form')
         
-        print('redirecting')
         return redirect(url_for('.complete'))
 
 

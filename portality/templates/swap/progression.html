@@ -104,8 +104,8 @@ jQuery(document).ready(function() {
         } else {
             var qq = {
                 'query': qs,
-                'fields': ['degree_course_name','degree_additional_information'],
-                'use_dis_max': true
+                'fields': ['degree_course_name','degree_additional_information'] //,
+                //'use_dis_max': true
             };
             qry.query.bool.must.push({'query_string': qq})
         }
@@ -256,8 +256,8 @@ jQuery(document).ready(function() {
                     {
                         'query_string': {
                             'query': '',
-                            'fields': ['degree_course_name','degree_additional_information'],
-                            'use_dis_max': true
+                            'fields': ['degree_course_name','degree_additional_information'] //,
+                            //'use_dis_max': true
                         }
                     }
                 ]

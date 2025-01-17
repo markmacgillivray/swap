@@ -44,6 +44,7 @@ class DomainObject(UserDict):
     
     @classmethod
     def send(cls, action, kind, id, data):
+        print('in send', action, kind, id)
         headers = {}
         if isinstance(data, dict):
             data = json.dumps(data)
@@ -51,6 +52,7 @@ class DomainObject(UserDict):
         if app.config.get('ELASTIC_SEARCH_APIKEY', None):
             headers['Authorization'] = 'ApiKey ' + app.config['ELASTIC_SEARCH_APIKEY']
         if action == 'post':
+            print('doing post', cls.target(kind, id))
             return requests.post(cls.target(kind, id), data=data, headers=headers)
         elif action == 'put':
             return requests.put(cls.target(kind, id), data=data, headers=headers)

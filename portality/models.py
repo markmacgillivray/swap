@@ -75,10 +75,13 @@ class Student(DomainObject):
         else:
             self.data['other_qualifications'] = False
 
+        print('self save calling self send')
         r = self.send('post', 'doc', self.data['id'], self.data)
+        print(r.status_code, r.text)
 
 
     def save_from_form(self, request):
+        print('in save from form')
         applications = []
         progressions = []
         schoolquals = []
@@ -215,6 +218,7 @@ class Student(DomainObject):
                 self.data['school_qualfications'] = []
                 self.data['post_school_qualifications'] = []
                 
+        print('self saving')
         self.save()
 
 

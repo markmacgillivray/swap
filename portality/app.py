@@ -17,6 +17,7 @@ from portality.view.swap.imports import blueprint as imports
 from portality.view.swap.exports import blueprint as exports
 
 from portality.view.query import blueprint as query
+from portality.view.stream import blueprint as stream
 
 
 app.register_blueprint(account, url_prefix='/account')
@@ -28,7 +29,7 @@ app.register_blueprint(imports, url_prefix='/admin/import')
 app.register_blueprint(exports, url_prefix='/admin/export')
 
 app.register_blueprint(query, url_prefix='/query')
-
+app.register_blueprint(stream, url_prefix='/stream')
 
 
 @login_manager.user_loader

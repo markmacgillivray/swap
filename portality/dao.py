@@ -215,6 +215,7 @@ class DomainObject(UserDict):
             pass
 
         if 'size' not in query: query['size'] = 10
+        if isinstance(query['size'],str): query['size'] = int(query['size'])
         if 'sort' not in query: query['sort'] = ['_doc']
         qt = 'search' if query['size'] <= app.config.get('MAX_QUERY_SIZE',10000) else 'scroll' # max_result_window can be configured in index settings, but not on serverless providers
         total = query['size']

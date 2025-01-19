@@ -159,7 +159,7 @@ def download_csv(recordlist,keys):
             longrecordlist.append(rec)
 
     # make a csv string of the records
-    csvdata = StringIO.StringIO()
+    csvdata = StringIO()
     firstrecord = True
     for record in longrecordlist:
         # for the first one, put the keys on the first line, otherwise just newline

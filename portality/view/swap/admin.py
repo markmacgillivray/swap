@@ -215,7 +215,7 @@ def exportdata(model):
     else:
         records = [i['_source'] for i in klass.query(size=10000000).get('hits',{}).get('hits',[])]
     # make a csv string of the records
-    csvdata = StringIO.StringIO()
+    csvdata = StringIO()
     firstrecord = True        
     if len(records) != 0:
         keys = sorted(records[0].keys())

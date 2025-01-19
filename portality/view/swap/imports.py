@@ -1,5 +1,5 @@
 import json, csv, time
-from io import StringIO
+from io import BytesIO
 from datetime import datetime
 
 from flask import Blueprint, request, flash, abort, render_template, redirect, send_file
@@ -636,7 +636,7 @@ def _download_applications(recordlist, whatsort, uni):
     keys = ['start_year','locale','ucas_number','last_name','first_name','gender','date_of_birth','post_code','college','institution_shortname', 'course_name','course_code','decisions','reg_1st_year','reg_2nd_year_or_left','reg_3rd_year_or_left','reg_4th_year_or_left','degree_classification_awarded']
 
     # make a csv string of the records, with one line per application
-    csvdata = StringIO()
+    csvdata = BytesIO()
     firstrecord = True
     for record in recordlist:
         if whatsort == 'applications':
@@ -653,25 +653,25 @@ def _download_applications(recordlist, whatsort, uni):
                     if fk:
                         fk = False
                     else:
-                        csvdata.write(',')
-                    csvdata.write('"' + key + '"')
-                csvdata.write('\n')
+                        csvdata.write(b',')
+                    csvdata.write(b'"' + bytes(key, 'utf-8') + b'"')
+                csvdata.write(b'\n')
                 firstrecord = False
             else:
-                csvdata.write('\n')
+                csvdata.write(b'\n')
             # and then add each application for each student as a line
             firstkey = True
             for key in keys:
                 if firstkey:
                     firstkey = False
                 else:
-                    csvdata.write(',')
+                    csvdata.write(b',')
                 if key in appn.keys():
                     # process each key as required
                     tidykey = appn[key].replace('"',"'")
-                    csvdata.write('"' + tidykey + '"')
+                    csvdata.write(b'"' + bytes(tidykey, 'utf-8') + b'"')
                 else:
-                    csvdata.write('""')
+                    csvdata.write(b'""')
 
     # dump to the browser as a csv attachment
     csvdata.seek(0)

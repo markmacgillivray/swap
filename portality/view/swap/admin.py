@@ -8,7 +8,7 @@ from portality.core import app
 from portality.view.swap.forms import dropdowns
 import portality.models as models
 
-from io import StringIO
+from io import BytesIO
 
 
 
@@ -215,7 +215,7 @@ def exportdata(model):
     else:
         records = [i['_source'] for i in klass.query(size=10000000).get('hits',{}).get('hits',[])]
     # make a csv string of the records
-    csvdata = StringIO()
+    csvdata = BytesIO()
     firstrecord = True        
     if len(records) != 0:
         keys = sorted(records[0].keys())
@@ -236,35 +236,35 @@ def exportdata(model):
                 if fk:
                     fk = False
                 else:
-                    csvdata.write(',')
-                csvdata.write('"' + key + '"')
-            csvdata.write('\n')
+                    csvdata.write(b',')
+                csvdata.write(b'"' + bytes(key, 'utf-8') + b'"')
+            csvdata.write(b'\n')
             firstrecord = False
         else:
-            csvdata.write('\n')
+            csvdata.write(b'\n')
         # and then add each record as a line with the keys as chosen by the user
         firstkey = True
         for key in keys:
             if firstkey:
                 firstkey = False
             else:
-                csvdata.write(',')
+                csvdata.write(b',')
             if key == 'swap_id':
-                csvdata.write('"' + record['id'] + '"')
+                csvdata.write(b'"' + bytes(record['id'], 'utf-8') + b'"')
             elif key == 'swap_delete':
-                csvdata.write('""')
+                csvdata.write(b'""')
             elif key in record:
                 if isinstance(record[key],bool):
                     if record[key]:
-                        csvdata.write('"true"')
+                        csvdata.write(b'"true"')
                     else:
-                        csvdata.write('"false"')
+                        csvdata.write(b'"false"')
                 elif isinstance(record[key],list):
-                    csvdata.write('"' + _fixify(",".join(record[key])) + '"')
+                    csvdata.write(b'"' + bytes(_fixify(",".join(record[key])), 'utf-8') + b'"')
                 else:
-                    csvdata.write('"' + _fixify(record[key]) + '"')
+                    csvdata.write(b'"' + bytes(_fixify(record[key]), 'utf-8') + b'"')
             else:
-                csvdata.write("")
+                csvdata.write(b"")
     # dump to the browser as a csv attachment
     csvdata.seek(0)
     return send_file(

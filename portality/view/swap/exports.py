@@ -2,7 +2,7 @@
 from copy import deepcopy
 from datetime import datetime
 
-from io import StringIO
+from io import BytesIO
 
 import json
 
@@ -159,7 +159,7 @@ def download_csv(recordlist,keys):
             longrecordlist.append(rec)
 
     # make a csv string of the records
-    csvdata = StringIO()
+    csvdata = BytesIO()
     firstrecord = True
     for record in longrecordlist:
         # for the first one, put the keys on the first line, otherwise just newline
@@ -169,12 +169,12 @@ def download_csv(recordlist,keys):
                 if fk:
                     fk = False
                 else:
-                    csvdata.write(',')
-                csvdata.write('"' + key + '"')
-            csvdata.write('\n')
+                    csvdata.write(b',')
+                csvdata.write(b'"' + bytes(key, 'utf-8') + b'"')
+            csvdata.write(b'\n')
             firstrecord = False
         else:
-            csvdata.write('\n')
+            csvdata.write(b'\n')
         # and then add each record as a line with the keys as chosen by the user
         firstkey = True
         for key in keys:
@@ -182,7 +182,7 @@ def download_csv(recordlist,keys):
             if firstkey:
                 firstkey = False
             elif key not in ['course_code','course_name','start_year','conditions','decisions','school_qualifications_levels','post_school_qualifications_levels']:
-                csvdata.write(',')
+                csvdata.write(b',')
             if key in record.keys() or key == 'address' or key in uniprogressionkeys or key in college_progressionkeys:
                 if key == 'address':
                     tidykey = record.get('address_line_1','') + '\n'
@@ -265,15 +265,15 @@ def download_csv(recordlist,keys):
                         tidykey = ",".join(record[key])
                     else:
                         tidykey = record[key]
-                csvdata.write('"' + fixify(tidykey,unquote) + '"')
+                csvdata.write(b'"' + bytes(fixify(tidykey,unquote), 'utf-8') + b'"')
                 if not unquote:
                     print(fixify(tidykey,unquote))
             elif key in ['school_qualifications','post_school_qualifications']:
-                csvdata.write('"",""')
+                csvdata.write(b'"",""')
             elif key == "applications":
-                csvdata.write('"","","","","",""')
+                csvdata.write(b'"","","","","",""')
             elif key not in ['course_code','course_name','start_year','conditions','decisions','school_qualifications_levels','post_school_qualifications_levels'] and (not hasappns or key not in ['course_code','course_name','start_year','conditions','decisions']):
-                csvdata.write('""')
+                csvdata.write(b'""')
                 
     # dump to the browser as a csv attachment
     csvdata.seek(0)

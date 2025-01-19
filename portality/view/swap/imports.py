@@ -1,4 +1,4 @@
-import json, csv, time, string
+import json, csv, time
 from io import StringIO
 from datetime import datetime
 
@@ -15,7 +15,7 @@ blueprint = Blueprint('imports', __name__)
 
 def clean(strn):
     newstr = ''
-    allowed = string.lowercase + string.uppercase + "@!%&*()_-+=;:~#./?[]{}, '" + '0123456789'
+    allowed = 'abcdefghijklmnopqrstuvwxyz' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + "@!%&*()_-+=;:~#./?[]{}, '" + '0123456789'
     for part in strn:
         if part == '\n':
             newstr += '  '

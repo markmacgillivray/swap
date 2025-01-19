@@ -1,4 +1,4 @@
-import time, string
+import time
 from datetime import datetime
 
 from flask import Blueprint, request, flash, abort, render_template, redirect, url_for, send_file
@@ -377,7 +377,7 @@ def archives():
 
 def _fixify(strng):
     newstr = ''
-    allowed = string.lowercase + string.uppercase + "@!%&*()_-+=;:~#./?[]{}, '" + '0123456789'
+    allowed = 'abcdefghijklmnopqrstuvwxyz' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + "@!%&*()_-+=;:~#./?[]{}, '" + '0123456789'
     for part in strng:
         if part in allowed or part == '\n':
             newstr += part

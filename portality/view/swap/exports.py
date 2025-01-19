@@ -3,7 +3,6 @@ from copy import deepcopy
 from datetime import datetime
 
 from io import StringIO
-import string
 
 import json
 
@@ -58,7 +57,8 @@ def fixify(strng,unquote=True):
         return str(strng)
     else:
         newstr = ''
-        allowed = string.lowercase + string.uppercase + "@!%&*()_-+=;:~#./?[]{}, '" + '0123456789'
+        
+        allowed = 'abcdefghijklmnopqrstuvwxyz' + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ' + "@!%&*()_-+=;:~#./?[]{}, '" + '0123456789'
         for part in strng:
             if part == '"':
                 if unquote:

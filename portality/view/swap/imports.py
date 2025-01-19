@@ -678,7 +678,7 @@ def _download_applications(recordlist, whatsort, uni):
     return send_file(
         csvdata, 
         mimetype='text/csv',
-         attachment_filename="swap_" + uni + "_export_" + datetime.now().strftime("%d%m%Y%H%M") + ".csv",
+        download_name="swap_" + uni + "_export_" + datetime.now().strftime("%d%m%Y%H%M") + ".csv",
         as_attachment=True
     )
 

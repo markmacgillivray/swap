@@ -270,7 +270,7 @@ def exportdata(model):
     return send_file(
         csvdata, 
         mimetype='text/csv',
-         attachment_filename="swap_" + model + "_export_" + datetime.now().strftime("%d%m%Y%H%M") + ".csv",
+        download_name="swap_" + model + "_export_" + datetime.now().strftime("%d%m%Y%H%M") + ".csv",
         as_attachment=True
     )
     

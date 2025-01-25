@@ -548,7 +548,8 @@ def index(model=None):
                             prog = models.Progression()
                             if 'swap_delete' in rec: del rec['swap_delete']
                             for k in rec.keys():
-                                prog[k] = clean(rec[k])
+                                if k != '':
+                                    prog[k] = clean(rec[k])
                             prog.save()
                         else:
                             deleteit = False
@@ -561,7 +562,8 @@ def index(model=None):
                             else:
                                 updates += 1
                                 for k in rec.keys():
-                                    prog[k] = clean(rec[k])
+                                    if k != '':
+                                        prog[k] = clean(rec[k])
                                 prog.data['id'] = rid
                                 prog.save()
 

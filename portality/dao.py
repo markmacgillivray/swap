@@ -42,6 +42,35 @@ class DomainObject(UserDict):
             if kind == 'scroll' and not id: t += '&scroll=2m'
         return t
     
+    # for fixing missing progressions:
+    #d7f4ecce10fb43b386d283e30d0e846e
+    #d3df8db20a914f2e8518404710992396
+    #5655d8eadffa415c90946c6e84d8bb5d
+    #2b197d66d1964f43b1de89c8cf97f8ed
+    #>>> missing['186bd4412e684ca1812003f035ff19eb']
+    #{'degree_special_requirements': '3 units at SCQF Level 5 Maths.', '': 'Access programme must include 3 un
+    #its of SCQF Level 5 Maths or Core 4 Maths.', 'last_updated': '2024-07-12 1231', 'degree_additional_inform
+    #ation': '', 'author': 'SWAPEast', 'locale': 'East', 'access_course_college': 'Fife College', 'access_cour
+    #se_name': 'Access to Arts, Humanities and Primary Education', 'id': '186bd4412e684ca1812003f035ff19eb', '
+    #degree_institution_name': 'Heriot Watt University', 'created_date': '2016-10-05 1212', 'degree_course_nam
+    #e': 'Computer Systems  (Games Programming) BSc', 'degree_profile_grades_required': 'ABB'}
+    #>>> missing['a65b7a5b28a343d086e56043acac603e']
+    #{'degree_special_requirements': '3 units at SCQF Level 5 Maths.', '': 'Access programme must include 3 un
+    #its of SCQF Level 5 Maths or Core 4 Maths.', 'last_updated': '2024-07-12 1231', 'degree_additional_inform
+    #ation': '', 'author': 'SWAPEast', 'locale': 'East', 'access_course_college': 'Fife College', 'access_cour
+    #se_name': 'Access to Arts, Humanities and Primary Education', 'id': 'a65b7a5b28a343d086e56043acac603e', '
+    #degree_institution_name': 'Heriot Watt University', 'created_date': '2016-10-05 1212', 'degree_course_nam
+    #e': 'Computer Systems (BSc)', 'degree_profile_grades_required': 'ABB'}
+    #>>> for h in p['hits']['hits']:
+    #...     if h['_id'] == 'd7f4ecce10fb43b386d283e30d0e846e':
+    #...         print(h['_source'])
+    #{'degree_special_requirements': '', '': '', 'last_updated': '2024-07-12 1230', 'degree_additional_informa
+    #tion': '', 'author': 'SWAPEast', 'locale': 'East', 'access_course_college': 'Edinburgh College', 'access_
+    #course_name': 'Access to Engineering', 'id': 'd7f4ecce10fb43b386d283e30d0e846e', 'degree_institution_name
+    #': 'Heriot Watt University', 'created_date': '2017-07-11 1053', 'degree_course_name': 'Geography BSc (Hon
+    #s)', 'degree_profile_grades_required': 'BBB'}
+
+
     @classmethod
     def send(cls, action, kind, id, data):
         headers = {}
@@ -50,6 +79,7 @@ class DomainObject(UserDict):
             headers['Content-Type'] = 'application/json'
         if app.config.get('ELASTIC_SEARCH_APIKEY', None):
             headers['Authorization'] = 'ApiKey ' + app.config['ELASTIC_SEARCH_APIKEY']
+        #print(cls.target(kind, id), headers)
         if action == 'post':
             return requests.post(cls.target(kind, id), data=data, headers=headers)
         elif action == 'put':

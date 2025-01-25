@@ -94,7 +94,10 @@ def initialise_index(app):
                 print('Uploading', key, 'from', fn)
                 with open(fn, 'r') as f:
                     dump = json.load(f)
-                    data = [d['_source'] for d in dump['hits']['hits']]
+                    try:
+                        data = [d['_source'] for d in dump['hits']['hits']]
+                    except:
+                        data = dump
                     print('Uploading', len(data), 'records')
                     # convert data to ES bulk upload format and send
                     bulk = []

@@ -64,9 +64,9 @@ def index(model=None):
                 if "csv" in request.files.get('upfile').filename:
                     upfile = request.files.get('upfile')
                     if model.lower() == 'ucas' or model.lower() == 'asr':
-                        reader = csv.reader( upfile )
+                        reader = csv.reader( str(upfile) )
                     else:
-                        reader = csv.DictReader( upfile )
+                        reader = csv.DictReader( str(upfile) )
                     records = [ row for row in reader ]
                 elif "json" in request.files.get('upfile').filename:
                     records = json.load(upfile)
@@ -582,7 +582,9 @@ def index(model=None):
                 flash(str(len(records)) + " records have been imported, there are now " + str(checklen) + " records.")
                 return render_template('swap/admin/import.html', model=model)
 
-            except:
+            except Exception as e:
+                print('import progressions error')
+                print(e)
                 flash("There was an error importing your records. Please try again.")
                 return render_template('swap/admin/import.html', model=model)
 

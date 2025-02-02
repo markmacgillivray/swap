@@ -247,8 +247,10 @@ def index(model=None):
                                             pass
                                 student = None
                                 appnset.append(nappn)
-                            except:
+                            except Exception as e:
                                 # failed to add the appn data to the student
+                                print(e)
+                                print(str(counter))
                                 failures.append('Failed to read what appeared to be application data out of row ' + str(counter))
                                 
                     flash('Processed ' + str(counter) + ' rows of data')

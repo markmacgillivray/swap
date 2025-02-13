@@ -1,8 +1,6 @@
 # a python script to remove empty progressions records
 import requests
 
-# read the app.cfg file one folder up to get the DB connection data
-cfg = False
 es_host = False
 es_key = False
 headers = {'Content-Type': 'application/json'}
@@ -21,25 +19,29 @@ def work():
     print('Worked on', worked, 'records')
 
 
-
-try:
-    cfg = open("../../app.cfg", "r")
-except:
-    print("Error reading app.cfg")
-    try:
-        cfg = open("../../portality/default_settings.py", "r")
-    except:
-        print("Error reading portality/default_settings.py")
-
-try:
+def config(t):
+    global es_host
+    global es_key
+    cfg = open(t, "r")
     for line in cfg:
         if "ELASTIC_SEARCH_HOST" in line:
             es_host = line.split(" = ")[1].strip().replace("'", "").replace('"', '')
         elif "ELASTIC_SEARCH_APIKEY" in line:
             es_key = line.split(" = ")[1].strip().replace("'", "").replace('"', '')
-
     cfg.close()
 
+try:
+    config("../../app.cfg")
+except:
+    print("Error reading app.cfg")
+
+if not es_host:
+    try:
+        config("../../portality/default_settings.py")
+    except:
+        print("Error reading portality/default_settings.py")
+
+try:
     if es_host:
         es_host = es_host.rstrip('/') + '/'
         if es_key:

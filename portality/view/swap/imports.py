@@ -88,9 +88,9 @@ def index(model=None):
                         try:
                             # these records should only exist for students with ucas numbers already in system, so only match by that
                             qry = { 'query': { 'bool': { 'must': [] } }, 'sort': {'created_date'+app.config['FACET_FIELD']: 'desc'} }
-                            qry['query']['bool']['must'].append({'term':{'ucas_number'+app.config['FACET_FIELD']:rec['Personal Id'].strip()}}) # or Application number?
+                            qry['query']['bool']['must'].append({'term':{'ucas_number'+app.config['FACET_FIELD']:rec['Personal Id'].strip()}})
                             q = models.Student().query(q=qry)
-                            if q.get('hits',{}).get('total',0) == 1: # if student applied in previous year, would they have the same UCAS number? If so this may not match 1
+                            if q.get('hits',{}).get('total',0) >= 1: # there can be older records with same UCAS number
                                 sid = q['hits']['hits'][0]['_source']['id']
                                 student = models.Student.pull(sid)
                                 nofaps = []
@@ -240,6 +240,12 @@ def index(model=None):
                                 "conditions": rec['Summary of conditions'].strip(),
                                 "start_year": rec['Year of entry'].strip()
                             }
+
+                            if len(records) == 1 and counter == 1 and student is not None:
+                                previous = student # special case for single record import
+                                if rec.get('Personal Id', False) and not previous.data.get('ucas_number',False):
+                                    previous.data['ucas_number'] = rec['Personal Id']
+                                    addun = True
 
                             if previous is not None and (student is None or previous.id != student.id or counter == len(records)):
                                 if counter == len(records):

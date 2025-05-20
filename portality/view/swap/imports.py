@@ -67,7 +67,7 @@ def index(model=None):
                     #    reader = csv.reader( str(upfile) )
                     #else:
                     #reader = csv.DictReader( upfile )
-                    content = str(upfile.read().decode('utf-8')).splitlines()
+                    content = str(upfile.read().decode('utf-8')).replace('\r\n', '\n').replace('^M', '').splitlines()
                     reader = csv.DictReader( content )
                     records = [ row for row in reader ]
                 elif "json" in request.files.get('upfile').filename:
@@ -80,217 +80,113 @@ def index(model=None):
                         return render_template('swap/admin/import.html')
 
 
-                if model.lower() == 'asr': # this is the final data upload
-                    updates = []
-                    failures = []
-                    for rec in records:
-                        #if rec[0].strip().lower() != 'surname':
-                        try:
-                            # these records should only exist for students with ucas numbers already in system, so only match by that
-                            qry = { 'query': { 'bool': { 'must': [] } }, 'sort': {'created_date'+app.config['FACET_FIELD']: 'desc'} }
-                            qry['query']['bool']['must'].append({'term':{'ucas_number'+app.config['FACET_FIELD']:rec['Personal Id'].strip()}})
-                            q = models.Student().query(q=qry)
-                            if q.get('hits',{}).get('total',0) >= 1: # there can be older records with same UCAS number
-                                sid = q['hits']['hits'][0]['_source']['id']
-                                student = models.Student.pull(sid)
-                                nofaps = []
-                                for ap in student.data['applications']:
-                                    if ap['choice_number'] != 'Final': # What if the student applied in a previous year? Keep old final?
-                                        nofaps.append(ap)
-                                student.data['applications'] = nofaps
-                                #student.data['applications'].append({
-                                #    "choice_number": 'Final',
-                                #    "institution_code": rec[9].strip(),
-                                #    "institution_shortname": rec[8].strip(),
-                                #    "course_code": rec[10].strip(),
-                                #    "decisions": "Not placed" if rec[12].strip().lower == "not placed" else "",
-                                #    "course_name": "" if rec[12].strip().strip().lower == "not placed" else rec[12].strip(),
-                                #    "start_year": rec[14].strip()
-                                #})
-                                #student.data['applications'].append({
-                                #    "choice_number": 'Final',
-                                #    "institution_code": rec[9].strip(),
-                                #    "institution_shortname": rec[8].strip(),
-                                #    "course_code": rec[10].strip(),
-                                #    "decisions": "Not placed" if rec[15].strip().lower == "not placed" else "",
-                                #    "course_name": "" if rec[15].strip().strip().lower == "not placed" else rec[15].strip(),
-                                #    "start_year": rec[21].strip()
-                                #})
-                                student.data['applications'].append({
-                                    "choice_number": 'Final',
-                                    "institution_code": rec['Provider code'],
-                                    "institution_shortname": rec['Provider name'],
-                                    "course_code": rec['Course code'],
-                                    "decisions": "Not placed" if rec['Course placed'].strip().strip().lower == "not placed" else "",
-                                    "course_name": "" if rec['Course placed'].strip().strip().lower in ["not placed", "application cancelled"] else rec['Course placed'].strip().strip(),
-                                    "start_year": rec['Year of entry']
-                                })
-                                student.save()
-                                updates.append('Updated student <a href="/admin/student/' + student.id + '">' + student.data['first_name'] + ' ' + student.data['last_name'] + '</a>')
-                            else:
-                                failures.append('Could not find student in system with UCAS number ' + rec[4])
-                        except:
-                            failures.append('Failed to read student data for ' + rec[4])
-
-                    flash('Processed data')
-                    return render_template('swap/admin/import.html', model=model, failures=failures, updates=updates)
-
-
-
-                elif model.lower() == 'ucas': # this is the main student applications, may also be referred to as ASR, but is not the ASR final data
-                    previous = None
-                    addun = False
-                    appnset = []
-                    counter = 0
+                if model.lower() == 'ucas':
+                    _students = {}
+                    _changed = []
                     updates = []
                     failures = []
                     stayedsame = []
                     for rec in records:
-                        counter += 1
-                        #if rec[0].strip().lower() != 'surname':
+                        student = None
                         try:
-                            #date_of_birth = rec[2].strip()
-                            date_of_birth = rec['Date of birth'].strip()
-                            if '-' in date_of_birth: date_of_birth = date_of_birth.replace('-',' ')
-                            if ' ' in date_of_birth:
-                                parts = date_of_birth.split(' ')
-                                mon = "01"
-                                if parts[1].lower() == 'jan':
-                                    mon = "01"
-                                elif parts[1].lower() == 'feb':
-                                    mon = "02"
-                                elif parts[1].lower() == 'mar':
-                                    mon = "03"
-                                elif parts[1].lower() == 'apr':
-                                    mon = "04"
-                                elif parts[1].lower() == 'may':
-                                    mon = "05"
-                                elif parts[1].lower() == 'jun':
-                                    mon = "06"
-                                elif parts[1].lower() == 'jul':
-                                    mon = "07"
-                                elif parts[1].lower() == 'aug':
-                                    mon = "08"
-                                elif parts[1].lower() == 'sep':
-                                    mon = "09"
-                                elif parts[1].lower() == 'oct':
-                                    mon = "10"
-                                elif parts[1].lower() == 'nov':
-                                    mon = "11"
-                                elif parts[1].lower() == 'dec':
-                                    mon = "12"
-                                if len(str(parts[0])) == 1:
-                                    parts[0] = '0' + str(parts[0])
-                                if len(str(mon)) == 1:
-                                    mon = '0' + str(mon)
-                                if len(str(parts[2])) == 1:
-                                    parts[2] = '0' + str(parts[2])
-                                if len(str(parts[2])) == 2:
-                                    if int(parts[2]) > 50:
-                                        year = str("19" + str(parts[2]))
-                                    else:
-                                        year = str("20" + str(parts[2]))
+                            if rec.get('Personal Id',False):
+                                rec['Personal Id'] = rec['Personal Id'].strip()
+                                if _students.get(rec['Personal Id'],False):
+                                    student = _students[rec['Personal Id']]
                                 else:
-                                    year = str(parts[2])
-                                date_of_birth = str(parts[0]) + '/' + mon + '/' + year
+                                    qry = { 'query': { 'bool': { 'must': [] } }, 'sort': {'created_date'+app.config['FACET_FIELD']: 'desc'} }
+                                    qry['query']['bool']['must'].append({'term':{'ucas_number'+app.config['FACET_FIELD']:rec['Personal Id']}})
+                                    q = models.Student().query(q=qry)
+                                    if q.get('hits',{}).get('total',0) >= 1: # there can be older records with same UCAS number
+                                        student = models.Student.pull(q['hits']['hits'][0]['_source']['id'])
+                                    if student is not None:
+                                        _students[rec['Personal Id']] = student
+                            if student is None: # if ucas number did not find it try with names and dob
+                                try:
+                                    date_of_birth = _get_dob(rec['Date of birth'].strip())
+                                    if student is None and rec.get('Surname', False) and rec.get('Forename', False) and len(date_of_birth) > 1:
+                                        rec['Surname'] = rec['Surname'].strip()
+                                        rec['Forename'] = rec['Forename'].strip().split(' ')[0]
+                                        sid = rec['Surname'] + '_' + rec['Forename'] + '_' + date_of_birth
+                                        if _students.get(sid,False):
+                                            student = _students[sid]
+                                        else:
+                                            qry = { 'query': { 'bool': { 'must': [] } }, 'sort': {'created_date'+app.config['FACET_FIELD']: 'desc'} }
+                                            qry['query']['bool']['must'].append({'match':{'last_name':{'query':rec['Surname'], 'fuzziness':0.8}}})
+                                            qry['query']['bool']['must'].append({'match':{'first_name':{'query':rec['Forename'], 'fuzziness':0.8}}})
+                                            qry['query']['bool']['must'].append({'term':{'date_of_birth'+app.config['FACET_FIELD']:date_of_birth}})
+                                            q = models.Student().query(q=qry)
+                                            if q.get('hits',{}).get('total',0) != 0:
+                                                student = models.Student.pull(q['hits']['hits'][0]['_source']['id'])
+                                            if student is not None:
+                                                _students[sid] = student
+                                        if student is not None and rec.get('Personal Id',False) and not student.data.get('ucas_number',False):
+                                            student.data['ucas_number'] = rec['Personal Id']
+                                            if student.id not in _changed:
+                                                _changed.append(student.id)
+                                                updates.append('Updated student <a href="/admin/student/' + student.id + '">' + student.data['first_name'] + ' ' + student.data['last_name'] + '</a> (' + student.data['ucas_number'] + ')')
+                                except:
+                                    pass
 
-                            # query the student index for a matching student
-                            student = None
-                            qry = { 'query': { 'bool': { 'must': [] } }, 'sort': {'created_date'+app.config['FACET_FIELD']: 'desc'} }
-                            #if len(rec[3]) > 1: # run query with ucas number search if available
-                            if rec.get('Personal Id', False):
-                                #qry['query']['bool']['must'].append({'term':{'ucas_number'+app.config['FACET_FIELD']:rec[3].strip()}})
-                                qry['query']['bool']['must'].append({'term':{'ucas_number'+app.config['FACET_FIELD']:rec['Personal Id'].strip()}})
-                                q = models.Student().query(q=qry)
-                                #if q.get('hits',{}).get('total',0) == 1: # what if student applies in subsequent years and has more than one record with same UCAS number?
-                                if q.get('hits',{}).get('total',0) != 0:
-                                    sid = q['hits']['hits'][0]['_source']['id']
-                                    student = models.Student.pull(sid)
-                            # if ucas number did not find it try with names and dob
-                            #if student is None and len(rec[0]) > 1 and len(rec[1]) > 1 and len(date_of_birth) > 1:
-                            if student is None and rec.get('Surname', False) and rec.get('Forename', False) and len(date_of_birth) > 1:
-                                qry['query']['bool']['must'] = []
-                                #qry['query']['bool']['must'].append({'match':{'last_name':{'query':rec[0].strip(), 'fuzziness':0.8}}})
-                                #qry['query']['bool']['must'].append({'match':{'first_name':{'query':rec[1].strip().split(' ')[0], 'fuzziness':0.8}}})
-                                qry['query']['bool']['must'].append({'match':{'last_name':{'query':rec['Surname'].strip(), 'fuzziness':0.8}}})
-                                qry['query']['bool']['must'].append({'match':{'first_name':{'query':rec['Forename'].strip().split(' ')[0], 'fuzziness':0.8}}})
-                                qry['query']['bool']['must'].append({'term':{'date_of_birth'+app.config['FACET_FIELD']:date_of_birth}})
-                                q = models.Student().query(q=qry)
-                                if q.get('hits',{}).get('total',0) != 0:
-                                    sid = q['hits']['hits'][0]['_source']['id']
-                                    student = models.Student.pull(sid)
+                            if student is not None:
+                                nap = {
+                                    "institution_code": rec['Provider code'].strip(),
+                                    "institution_shortname": rec['Provider name'].strip(),
+                                    "course_code": rec['Course code'].strip(),
+                                    "start_year": rec['Year of entry'].strip()
+                                }
+                                if rec.get('Course placed',False):
+                                    cp = rec['Course placed'].strip().strip().lower()
+                                    nap["choice_number"] = 'Final'
+                                    nap["decisions"] = "Not placed" if "not placed" in cp else ""
+                                    nap["course_name"] = "" if "not placed" in cp or "application cancelled" in cp else rec['Course placed'].strip().strip()
+                                else: # the above was old ASR format. UCAS format also requires:
+                                    nap["choice_number"] = rec['Choice number'].strip()
+                                    nap["decisions"] = rec['Decision/reply'].strip()
+                                    nap["course_name"] = rec['Course name'].strip()
+                                    nap["conditions"] = rec['Summary of conditions'].strip()
+                                #print(nap)
+                                isnew = True
+                                nofaps = []
+                                for ap in student.data.get('applications', []):
+                                    if True: #ap['choice_number'] != 'Final': # What if the student applied in a previous year? Keep old final? We did not in the past.
+                                        nofaps.append(ap)
+                                        if not any([x != y for x, y in zip(ap.values(), nap.values())]):
+                                            isnew = False
+                                if isnew:
+                                    if student.id not in _changed:
+                                        _changed.append(student.id)
+                                        updates.append('Updated student <a href="/admin/student/' + student.id + '">' + student.data['first_name'] + ' ' + student.data['last_name'] + '</a>')
+                                    nofaps.append(nap)
+                                    student.data['applications'] = nofaps
+                            else:
+                                failures.append('Could not find student ' + (rec['Personal Id'] if rec.get('Personal Id',False) else rec.get('Forename','') + ' ' + rec.get('Surname','')))
+                        except:
+                            failures.append('Failed to read student data for ' + (rec['Personal Id'] if rec.get('Personal Id',False) else rec.get('Forename','') + ' ' + rec.get('Surname','')))
 
-                            #nappn = {
-                            #    "choice_number": rec[7].strip(),
-                            #    "institution_shortname": rec[8].strip(),
-                            #    "institution_code": rec[9].strip(),
-                            #    "course_code": rec[10].strip(),
-                            #    "course_name": rec[11].strip(),
-                            #    "decisions": rec[15].strip(),
-                            #    "conditions": rec[17].strip(),
-                            #    "start_year": rec[21].strip()
-                            #}
-                            nappn = {
-                                "choice_number": rec['Choice number'].strip(),
-                                "institution_shortname": rec['Provider name'].strip(),
-                                "institution_code": rec['Provider code'].strip(),
-                                "course_code": rec['Course code'].strip(),
-                                "course_name": rec['Course name'].strip(),
-                                "decisions": rec['Decision/reply'].strip(),
-                                "conditions": rec['Summary of conditions'].strip(),
-                                "start_year": rec['Year of entry'].strip()
-                            }
-
-                            if len(records) == 1 and counter == 1 and student is not None:
-                                previous = student # special case for single record import
-                                if rec.get('Personal Id', False) and not previous.data.get('ucas_number',False):
-                                    previous.data['ucas_number'] = rec['Personal Id']
-                                    addun = True
-
-                            if previous is not None and (student is None or previous.id != student.id or counter == len(records)):
-                                if counter == len(records):
-                                    appnset.append(nappn) # make sure to catch the last one
-                                oldappns = previous.data.get('applications',[])
-                                changed = len(oldappns) != len(appnset) or any(x != y for x, y in zip(oldappns,appnset))
-                                if changed or addun:
-                                    if addun:
-                                        addun = False
-                                        updates.append('Updated student <a href="/admin/student/' + previous.id + '">' + previous.data['first_name'] + ' ' + previous.data['last_name'] + '</a> with UCAS number ' + previous.data['ucas_number'])
-                                    if changed:
-                                        previous.data['applications'] = appnset
-                                        updates.append('Updated student <a href="/admin/student/' + previous.id + '">' + previous.data['first_name'] + ' ' + previous.data['last_name'] + '</a>')
-                                    previous.save()
-                                else:
-                                    stayedsame.append('Found <a href="/admin/student/' + previous.id + '">' + previous.data['first_name'] + ' ' + previous.data['last_name'] + '</a> - no change.')
-                                appnset = []
-                                previous = None
-
-                            if student is None:
-                                #failures.append('Failed to find student ' + rec[1] + ' ' + rec[0] + ' (' + rec[3] + ') from row ' + str(counter))
-                                failures.append('Failed to find student ' + rec['Forename'] + ' ' + rec['Surname'] + ' (' + rec['Personal Id'] + ') from row ' + str(counter))
-                                appnset = []
-                            
-                            if previous is None or student is None or previous.id != student.id:
-                                previous = student
-                                #if previous is not None and len(rec[3]) > 1 and not previous.data.get('ucas_number',False):
-                                if previous is not None and rec.get('Personal Id', False) and not previous.data.get('ucas_number',False):
-                                    try:
-                                        #int(rec[3].strip())
-                                        #previous.data['ucas_number'] = rec[3].strip()
-                                        previous.data['ucas_number'] = rec['Personal Id']
-                                        addun = True
-                                    except:
-                                        pass
-                            student = None
-                            appnset.append(nappn)
-                        except Exception as e:
-                            # failed to add the appn data to the student
-                            print(e)
-                            print(str(counter))
-                            failures.append('Failed to read what appeared to be application data out of row ' + str(counter))
-                                
-                    flash('Processed ' + str(counter) + ' rows of data')
+                    _saved = 0
+                    _records = []
+                    for cid in _students:
+                        if _students[cid].id in _changed:
+                            _records.append(_students[cid].data)
+                            _saved += 1
+                        else:
+                            stayedsame.append('Student ' + cid + ' had no relevant updates to save.')
+                    if len(_records) > 0:
+                        try:
+                            models.Student().bulk(_records)
+                            _records = []
+                        except:
+                            _saved = 0
+                            failures.append('Failed to bulk save student data')
+                            updates = []
+                    print('ucas import had ' + str(len(_changed)) + ' students to update, saved ' + str(_saved))
+                    flash('Processed data with ' + str(len(records)) + ' rows, tried updates for ' + str(len(_changed)) + ' students, altered ' + str(_saved))
+                    _students = {}
+                    _changed = []
                     return render_template('swap/admin/import.html', model=model, failures=failures, updates=updates, stayedsame=stayedsame)
+
+
 
 
                 
@@ -622,10 +518,58 @@ def index(model=None):
                 return render_template('swap/admin/import.html', model=model)
 
             except Exception as e:
-                print('import progressions error')
+                print('import error')
                 print(e)
                 flash("There was an error importing your records. Please try again.")
                 return render_template('swap/admin/import.html', model=model)
+
+
+
+
+def _get_dob(date_of_birth):
+    if '-' in date_of_birth: date_of_birth = date_of_birth.replace('-',' ')
+    if ' ' in date_of_birth:
+        parts = date_of_birth.split(' ')
+        mon = "01"
+        if parts[1].lower() == 'jan':
+            mon = "01"
+        elif parts[1].lower() == 'feb':
+            mon = "02"
+        elif parts[1].lower() == 'mar':
+            mon = "03"
+        elif parts[1].lower() == 'apr':
+            mon = "04"
+        elif parts[1].lower() == 'may':
+            mon = "05"
+        elif parts[1].lower() == 'jun':
+            mon = "06"
+        elif parts[1].lower() == 'jul':
+            mon = "07"
+        elif parts[1].lower() == 'aug':
+            mon = "08"
+        elif parts[1].lower() == 'sep':
+            mon = "09"
+        elif parts[1].lower() == 'oct':
+            mon = "10"
+        elif parts[1].lower() == 'nov':
+            mon = "11"
+        elif parts[1].lower() == 'dec':
+            mon = "12"
+        if len(str(parts[0])) == 1:
+            parts[0] = '0' + str(parts[0])
+        if len(str(mon)) == 1:
+            mon = '0' + str(mon)
+        if len(str(parts[2])) == 1:
+            parts[2] = '0' + str(parts[2])
+        if len(str(parts[2])) == 2:
+            if int(parts[2]) > 50:
+                year = str("19" + str(parts[2]))
+            else:
+                year = str("20" + str(parts[2]))
+        else:
+            year = str(parts[2])
+        date_of_birth = str(parts[0]) + '/' + mon + '/' + year
+    return date_of_birth
 
 
 
@@ -726,3 +670,216 @@ def _download_applications(recordlist, whatsort, uni):
     )
 
 
+'''
+                if model.lower() == 'asr': # this is the final data upload
+                    updates = []
+                    failures = []
+                    for rec in records:
+                        #if rec[0].strip().lower() != 'surname':
+                        try:
+                            # these records should only exist for students with ucas numbers already in system, so only match by that
+                            qry = { 'query': { 'bool': { 'must': [] } }, 'sort': {'created_date'+app.config['FACET_FIELD']: 'desc'} }
+                            qry['query']['bool']['must'].append({'term':{'ucas_number'+app.config['FACET_FIELD']:rec['Personal Id'].strip()}})
+                            q = models.Student().query(q=qry)
+                            if q.get('hits',{}).get('total',0) >= 1: # there can be older records with same UCAS number
+                                sid = q['hits']['hits'][0]['_source']['id']
+                                student = models.Student.pull(sid)
+                                nofaps = []
+                                for ap in student.data['applications']:
+                                    if ap['choice_number'] != 'Final': # What if the student applied in a previous year? Keep old final?
+                                        nofaps.append(ap)
+                                student.data['applications'] = nofaps
+                                #student.data['applications'].append({
+                                #    "choice_number": 'Final',
+                                #    "institution_code": rec[9].strip(),
+                                #    "institution_shortname": rec[8].strip(),
+                                #    "course_code": rec[10].strip(),
+                                #    "decisions": "Not placed" if rec[12].strip().lower == "not placed" else "",
+                                #    "course_name": "" if rec[12].strip().strip().lower == "not placed" else rec[12].strip(),
+                                #    "start_year": rec[14].strip()
+                                #})
+                                #student.data['applications'].append({
+                                #    "choice_number": 'Final',
+                                #    "institution_code": rec[9].strip(),
+                                #    "institution_shortname": rec[8].strip(),
+                                #    "course_code": rec[10].strip(),
+                                #    "decisions": "Not placed" if rec[15].strip().lower == "not placed" else "",
+                                #    "course_name": "" if rec[15].strip().strip().lower == "not placed" else rec[15].strip(),
+                                #    "start_year": rec[21].strip()
+                                #})
+                                student.data['applications'].append({
+                                    "choice_number": 'Final',
+                                    "institution_code": rec['Provider code'],
+                                    "institution_shortname": rec['Provider name'],
+                                    "course_code": rec['Course code'],
+                                    "decisions": "Not placed" if rec['Course placed'].strip().strip().lower == "not placed" else "",
+                                    "course_name": "" if rec['Course placed'].strip().strip().lower in ["not placed", "application cancelled"] else rec['Course placed'].strip().strip(),
+                                    "start_year": rec['Year of entry']
+                                })
+                                student.save()
+                                updates.append('Updated student <a href="/admin/student/' + student.id + '">' + student.data['first_name'] + ' ' + student.data['last_name'] + '</a>')
+                            else:
+                                failures.append('Could not find student in system with UCAS number ' + rec[4])
+                        except:
+                            failures.append('Failed to read student data for ' + rec[4])
+
+                    flash('Processed data')
+                    return render_template('swap/admin/import.html', model=model, failures=failures, updates=updates)
+
+
+
+                elif model.lower() == 'ucas': # this is the main student applications, may also be referred to as ASR, but is not the ASR final data
+                    previous = None
+                    addun = False
+                    appnset = []
+                    counter = 0
+                    updates = []
+                    failures = []
+                    stayedsame = []
+                    for rec in records:
+                        counter += 1
+                        #if rec[0].strip().lower() != 'surname':
+                        try:
+                            #date_of_birth = rec[2].strip()
+                            date_of_birth = rec['Date of birth'].strip()
+                            if '-' in date_of_birth: date_of_birth = date_of_birth.replace('-',' ')
+                            if ' ' in date_of_birth:
+                                parts = date_of_birth.split(' ')
+                                mon = "01"
+                                if parts[1].lower() == 'jan':
+                                    mon = "01"
+                                elif parts[1].lower() == 'feb':
+                                    mon = "02"
+                                elif parts[1].lower() == 'mar':
+                                    mon = "03"
+                                elif parts[1].lower() == 'apr':
+                                    mon = "04"
+                                elif parts[1].lower() == 'may':
+                                    mon = "05"
+                                elif parts[1].lower() == 'jun':
+                                    mon = "06"
+                                elif parts[1].lower() == 'jul':
+                                    mon = "07"
+                                elif parts[1].lower() == 'aug':
+                                    mon = "08"
+                                elif parts[1].lower() == 'sep':
+                                    mon = "09"
+                                elif parts[1].lower() == 'oct':
+                                    mon = "10"
+                                elif parts[1].lower() == 'nov':
+                                    mon = "11"
+                                elif parts[1].lower() == 'dec':
+                                    mon = "12"
+                                if len(str(parts[0])) == 1:
+                                    parts[0] = '0' + str(parts[0])
+                                if len(str(mon)) == 1:
+                                    mon = '0' + str(mon)
+                                if len(str(parts[2])) == 1:
+                                    parts[2] = '0' + str(parts[2])
+                                if len(str(parts[2])) == 2:
+                                    if int(parts[2]) > 50:
+                                        year = str("19" + str(parts[2]))
+                                    else:
+                                        year = str("20" + str(parts[2]))
+                                else:
+                                    year = str(parts[2])
+                                date_of_birth = str(parts[0]) + '/' + mon + '/' + year
+
+                            # query the student index for a matching student
+                            student = None
+                            qry = { 'query': { 'bool': { 'must': [] } }, 'sort': {'created_date'+app.config['FACET_FIELD']: 'desc'} }
+                            #if len(rec[3]) > 1: # run query with ucas number search if available
+                            if rec.get('Personal Id', False):
+                                #qry['query']['bool']['must'].append({'term':{'ucas_number'+app.config['FACET_FIELD']:rec[3].strip()}})
+                                qry['query']['bool']['must'].append({'term':{'ucas_number'+app.config['FACET_FIELD']:rec['Personal Id'].strip()}})
+                                q = models.Student().query(q=qry)
+                                #if q.get('hits',{}).get('total',0) == 1: # what if student applies in subsequent years and has more than one record with same UCAS number?
+                                if q.get('hits',{}).get('total',0) != 0:
+                                    sid = q['hits']['hits'][0]['_source']['id']
+                                    student = models.Student.pull(sid)
+                            # if ucas number did not find it try with names and dob
+                            #if student is None and len(rec[0]) > 1 and len(rec[1]) > 1 and len(date_of_birth) > 1:
+                            if student is None and rec.get('Surname', False) and rec.get('Forename', False) and len(date_of_birth) > 1:
+                                qry['query']['bool']['must'] = []
+                                #qry['query']['bool']['must'].append({'match':{'last_name':{'query':rec[0].strip(), 'fuzziness':0.8}}})
+                                #qry['query']['bool']['must'].append({'match':{'first_name':{'query':rec[1].strip().split(' ')[0], 'fuzziness':0.8}}})
+                                qry['query']['bool']['must'].append({'match':{'last_name':{'query':rec['Surname'].strip(), 'fuzziness':0.8}}})
+                                qry['query']['bool']['must'].append({'match':{'first_name':{'query':rec['Forename'].strip().split(' ')[0], 'fuzziness':0.8}}})
+                                qry['query']['bool']['must'].append({'term':{'date_of_birth'+app.config['FACET_FIELD']:date_of_birth}})
+                                q = models.Student().query(q=qry)
+                                if q.get('hits',{}).get('total',0) != 0:
+                                    sid = q['hits']['hits'][0]['_source']['id']
+                                    student = models.Student.pull(sid)
+
+                            #nappn = {
+                            #    "choice_number": rec[7].strip(),
+                            #    "institution_shortname": rec[8].strip(),
+                            #    "institution_code": rec[9].strip(),
+                            #    "course_code": rec[10].strip(),
+                            #    "course_name": rec[11].strip(),
+                            #    "decisions": rec[15].strip(),
+                            #    "conditions": rec[17].strip(),
+                            #    "start_year": rec[21].strip()
+                            #}
+                            nappn = {
+                                "choice_number": rec['Choice number'].strip(),
+                                "institution_shortname": rec['Provider name'].strip(),
+                                "institution_code": rec['Provider code'].strip(),
+                                "course_code": rec['Course code'].strip(),
+                                "course_name": rec['Course name'].strip(),
+                                "decisions": rec['Decision/reply'].strip(),
+                                "conditions": rec['Summary of conditions'].strip(),
+                                "start_year": rec['Year of entry'].strip()
+                            }
+
+                            if len(records) == 1 and counter == 1 and student is not None:
+                                previous = student # special case for single record import
+                                if rec.get('Personal Id', False) and not previous.data.get('ucas_number',False):
+                                    previous.data['ucas_number'] = rec['Personal Id']
+                                    addun = True
+
+                            if previous is not None and (student is None or previous.id != student.id or counter == len(records)):
+                                if counter == len(records):
+                                    appnset.append(nappn) # make sure to catch the last one
+                                oldappns = previous.data.get('applications',[])
+                                changed = len(oldappns) != len(appnset) or any(x != y for x, y in zip(oldappns,appnset))
+                                if changed or addun:
+                                    if addun:
+                                        addun = False
+                                        updates.append('Updated student <a href="/admin/student/' + previous.id + '">' + previous.data['first_name'] + ' ' + previous.data['last_name'] + '</a> with UCAS number ' + previous.data['ucas_number'])
+                                    if changed:
+                                        previous.data['applications'] = appnset
+                                        updates.append('Updated student <a href="/admin/student/' + previous.id + '">' + previous.data['first_name'] + ' ' + previous.data['last_name'] + '</a>')
+                                    previous.save()
+                                else:
+                                    stayedsame.append('Found <a href="/admin/student/' + previous.id + '">' + previous.data['first_name'] + ' ' + previous.data['last_name'] + '</a> - no change.')
+                                appnset = []
+                                previous = None
+
+                            if student is None:
+                                #failures.append('Failed to find student ' + rec[1] + ' ' + rec[0] + ' (' + rec[3] + ') from row ' + str(counter))
+                                failures.append('Failed to find student ' + rec['Forename'] + ' ' + rec['Surname'] + ' (' + rec['Personal Id'] + ') from row ' + str(counter))
+                                appnset = []
+                            
+                            if previous is None or student is None or previous.id != student.id:
+                                previous = student
+                                #if previous is not None and len(rec[3]) > 1 and not previous.data.get('ucas_number',False):
+                                if previous is not None and rec.get('Personal Id', False) and not previous.data.get('ucas_number',False):
+                                    try:
+                                        #int(rec[3].strip())
+                                        #previous.data['ucas_number'] = rec[3].strip()
+                                        previous.data['ucas_number'] = rec['Personal Id']
+                                        addun = True
+                                    except:
+                                        pass
+                            student = None
+                            appnset.append(nappn)
+                        except Exception as e:
+                            # failed to add the appn data to the student
+                            print(e)
+                            print(str(counter))
+                            failures.append('Failed to read what appeared to be application data out of row ' + str(counter))
+                                
+                    flash('Processed ' + str(counter) + ' rows of data')
+                    return render_template('swap/admin/import.html', model=model, failures=failures, updates=updates, stayedsame=stayedsame)
+'''

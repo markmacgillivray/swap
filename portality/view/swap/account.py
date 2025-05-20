@@ -167,7 +167,7 @@ def existscheck(form, field):
 
 class RegisterForm(Form):
     w = StringField('Username', [validators.Length(min=3, max=25),existscheck], description="usernames")
-    n = StringField('Email Address', [validators.Length(min=3, max=35), validators.Email(message='Must be a valid email address')])
+    n = StringField('Email Address', [validators.Length(min=3, max=35)])
     s = PasswordField('Password', [
         validators.InputRequired(),
         validators.EqualTo('c', message='Passwords must match')

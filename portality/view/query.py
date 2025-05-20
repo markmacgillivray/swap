@@ -56,7 +56,17 @@ def query(path='Record'):
             qs = ''
         for item in request.values:
             if item not in ['q','source','callback','_'] and isinstance(qs,dict):
-                qs[item] = request.values[item]
+                if item == 'sort' and '.keyword' not in request.values[item]:
+                    if '.exact' in request.values[item]:
+                        qs[item] = request.values[item].replace('.exact','.keyword')
+                    elif ':' in request.values[item]:
+                        qs[item] = request.values[item].replace(':','.keyword:')
+                    elif ',' in request.values[item]:
+                        qs[item] = request.values[item].replace(',','.keyword,')
+                    else:
+                        qs[item] = request.values[item] + '.keyword'
+                else:
+                    qs[item] = request.values[item]
         resp = make_response( json.dumps(klass().query(q=qs)) )
     resp.mimetype = "application/json"
     return resp

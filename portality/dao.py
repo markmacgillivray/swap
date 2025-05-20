@@ -74,8 +74,8 @@ class DomainObject(UserDict):
     @classmethod
     def send(cls, action, kind, id, data):
         headers = {}
-        if isinstance(data, dict):
-            data = json.dumps(data)
+        if isinstance(data, dict) or isinstance(data, list) or isinstance(data, str): # bulk data is newline strings with json per line
+            if not isinstance(data, str): data = json.dumps(data)
             headers['Content-Type'] = 'application/json'
         if app.config.get('ELASTIC_SEARCH_APIKEY', None):
             headers['Authorization'] = 'ApiKey ' + app.config['ELASTIC_SEARCH_APIKEY']
@@ -147,6 +147,7 @@ class DomainObject(UserDict):
             data += json.dumps( {'index':{'_id':r[idkey], '_index': app.config['ELASTIC_SEARCH_DB'] + '_' + cls.__type__}} ) + '\n'
             data += json.dumps( r ) + '\n'
         r = cls.send('post', 'bulk', None, data)
+        if app.config.get('DEBUG',False): print(r.json())
         return r.json()
 
     @classmethod

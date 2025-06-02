@@ -251,7 +251,7 @@ class DomainObject(UserDict):
         qt = 'search' if query['size'] <= app.config.get('MAX_QUERY_SIZE',10000) else 'scroll' # max_result_window can be configured in index settings, but not on serverless providers
         total = query['size']
         if qt == 'scroll': query['size'] = app.config.get('MAX_QUERY_SIZE',10000)
-        if app.config.get('DEBUG',False): print(query)
+        #if app.config.get('DEBUG',False): print(query)
         r = cls.send('post', qt, None, query)
         res = r.json()
         if res.get('hits', {}).get('total',0) > total: total = res['hits']['total']

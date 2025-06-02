@@ -7,6 +7,7 @@ from flask_login import current_user
 
 from portality.core import app
 import portality.models as models
+import portality.util as util
 from portality.view.swap.forms import dropdowns as dropdowns
 
 
@@ -63,12 +64,7 @@ def index(model=None):
                 records = []
                 if "csv" in request.files.get('upfile').filename:
                     upfile = request.files.get('upfile')
-                    #if model.lower() == 'ucas' or model.lower() == 'asr':
-                    #    reader = csv.reader( str(upfile) )
-                    #else:
-                    #reader = csv.DictReader( upfile )
-                    content = str(upfile.read().decode('utf-8')).replace('\r\n', '\n').replace('^M', '').splitlines()
-                    reader = csv.DictReader( content )
+                    reader = csv.DictReader( util.dewindows(upfile.read()).splitlines() )
                     records = [ row for row in reader ]
                 elif "json" in request.files.get('upfile').filename:
                     records = json.load(upfile)
@@ -85,7 +81,6 @@ def index(model=None):
                     _changed = []
                     updates = []
                     failures = []
-                    stayedsame = []
                     for rec in records:
                         student = None
                         try:
@@ -98,8 +93,12 @@ def index(model=None):
                                     qry['query']['bool']['must'].append({'term':{'ucas_number'+app.config['FACET_FIELD']:rec['Personal Id']}})
                                     q = models.Student().query(q=qry)
                                     if q.get('hits',{}).get('total',0) >= 1: # there can be older records with same UCAS number
-                                        student = models.Student.pull(q['hits']['hits'][0]['_source']['id'])
-                                    if student is not None:
+                                        found = models.Student.pull(q['hits']['hits'][0]['_source']['id'])
+                                        tid = found.data['last_name'] + '_' + found.data['first_name'] + '_' + found.data['date_of_birth']
+                                        if _students.get(tid,False):
+                                            student = _students[tid]
+                                        else:
+                                            student = found
                                         _students[rec['Personal Id']] = student
                             if student is None: # if ucas number did not find it try with names and dob
                                 try:
@@ -117,7 +116,8 @@ def index(model=None):
                                             qry['query']['bool']['must'].append({'term':{'date_of_birth'+app.config['FACET_FIELD']:date_of_birth}})
                                             q = models.Student().query(q=qry)
                                             if q.get('hits',{}).get('total',0) != 0:
-                                                student = models.Student.pull(q['hits']['hits'][0]['_source']['id'])
+                                                found = models.Student.pull(q['hits']['hits'][0]['_source']['id'])
+                                                student = found if not found.data.get('ucas_number',False) or not _students.get(found.data['ucas_number'],False) else _students[found.data['ucas_number']]
                                             if student is not None:
                                                 _students[sid] = student
                                         if student is not None and rec.get('Personal Id',False) and not student.data.get('ucas_number',False):
@@ -125,6 +125,8 @@ def index(model=None):
                                             if student.id not in _changed:
                                                 _changed.append(student.id)
                                                 updates.append('Updated student <a href="/admin/student/' + student.id + '">' + student.data['first_name'] + ' ' + student.data['last_name'] + '</a> (' + student.data['ucas_number'] + ')')
+                                        if student is not None and student.data.get('ucas_number',False) and not _students.get(student.data['ucas_number'],False):
+                                            _students[student.data['ucas_number']] = student
                                 except:
                                     pass
 
@@ -140,38 +142,45 @@ def index(model=None):
                                     nap["choice_number"] = 'Final'
                                     nap["decisions"] = "Not placed" if "not placed" in cp else ""
                                     nap["course_name"] = "" if "not placed" in cp or "application cancelled" in cp else rec['Course placed'].strip().strip()
-                                else: # the above was old ASR format. UCAS format also requires:
+                                else:
                                     nap["choice_number"] = rec['Choice number'].strip()
                                     nap["decisions"] = rec['Decision/reply'].strip()
                                     nap["course_name"] = rec['Course name'].strip()
                                     nap["conditions"] = rec['Summary of conditions'].strip()
                                 #print(nap)
-                                isnew = True
-                                nofaps = []
-                                for ap in student.data.get('applications', []):
-                                    if True: #ap['choice_number'] != 'Final': # What if the student applied in a previous year? Keep old final? We did not in the past.
-                                        nofaps.append(ap)
-                                        if not any([x != y for x, y in zip(ap.values(), nap.values())]):
-                                            isnew = False
-                                if isnew:
-                                    if student.id not in _changed:
-                                        _changed.append(student.id)
-                                        updates.append('Updated student <a href="/admin/student/' + student.id + '">' + student.data['first_name'] + ' ' + student.data['last_name'] + '</a>')
-                                    nofaps.append(nap)
-                                    student.data['applications'] = nofaps
+                                which = False
+                                c = 0
+                                if 'applications' not in student.data: student.data['applications'] = []
+                                for ap in student.data['applications']:
+                                    if ap['institution_code'] == nap['institution_code'] and ap['course_code'] == nap['course_code'] and (ap['start_year'] == nap['start_year'] or nap['choice_number'] == 'Final'):
+                                        which = c
+                                        if nap['choice_number'] == 'Final':
+                                            for k in ['institution_shortname']: #, 'start_year']:
+                                                if nap[k] == '' and ap[k] != '': nap[k] = ap[k]
+                                    c += 1                                
+                                if isinstance(which,bool):
+                                    student.data['applications'].append(nap)
+                                else:
+                                    student.data['applications'][which] = nap
+                                if student.id not in _changed:
+                                    _changed.append(student.id)
+                                    updates.append('Updated student <a href="/admin/student/' + student.id + '">' + student.data['first_name'] + ' ' + student.data['last_name'] + '</a>')
                             else:
                                 failures.append('Could not find student ' + (rec['Personal Id'] if rec.get('Personal Id',False) else rec.get('Forename','') + ' ' + rec.get('Surname','')))
                         except:
                             failures.append('Failed to read student data for ' + (rec['Personal Id'] if rec.get('Personal Id',False) else rec.get('Forename','') + ' ' + rec.get('Surname','')))
 
                     _saved = 0
+                    _tosave = []
                     _records = []
                     for cid in _students:
-                        if _students[cid].id in _changed:
+                        print(cid)
+                        # student objects can have more than one pointer in _students, so check by id
+                        if _students[cid].id in _changed and _students[cid].id not in _tosave:
+                            print(cid, _students[cid].id)
+                            _tosave.append(_students[cid].id)
                             _records.append(_students[cid].data)
                             _saved += 1
-                        else:
-                            stayedsame.append('Student ' + cid + ' had no relevant updates to save.')
                     if len(_records) > 0:
                         try:
                             models.Student().bulk(_records)
@@ -180,11 +189,11 @@ def index(model=None):
                             _saved = 0
                             failures.append('Failed to bulk save student data')
                             updates = []
-                    print('ucas import had ' + str(len(_changed)) + ' students to update, saved ' + str(_saved))
-                    flash('Processed data with ' + str(len(records)) + ' rows, tried updates for ' + str(len(_changed)) + ' students, altered ' + str(_saved))
+                    print('ucas import found ' + str(len(records)) + ' rows, had ' + str(len(_changed)) + ' students to update, saved ' + str(_saved))
+                    flash('Processed data with ' + str(len(records)) + ' rows, found entries for ' + str(len(_changed)) + ' students, saved ' + str(_saved))
                     _students = {}
                     _changed = []
-                    return render_template('swap/admin/import.html', model=model, failures=failures, updates=updates, stayedsame=stayedsame)
+                    return render_template('swap/admin/import.html', model=model, failures=failures, updates=updates)
 
 
 
@@ -520,7 +529,7 @@ def index(model=None):
             except Exception as e:
                 print('import error')
                 print(e)
-                flash("There was an error importing your records. Please try again.")
+                flash("There was an error importing your records. Please try again. Error info: " + str(e))
                 return render_template('swap/admin/import.html', model=model)
 
 

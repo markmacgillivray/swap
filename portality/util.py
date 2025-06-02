@@ -5,6 +5,23 @@ from flask import request, current_app
 from portality.core import app
 
 
+def dewindows(string):
+    try:
+        string = string.decode("windows-1252")
+    except:
+        try:
+            string = string.decode("windows-1251")
+        except:
+            try:
+                string = string.decode("ISO-8859-1")
+            except:
+                try:
+                    string = string.decode("utf-8")
+                except:
+                    pass
+    return string
+
+
 def jsonp(f):
     """Wraps JSONified output for JSONP"""
     @wraps(f)

@@ -103,16 +103,16 @@ def index(model=None):
                             if student is None: # if ucas number did not find it try with names and dob
                                 try:
                                     date_of_birth = _get_dob(rec['Date of birth'].strip())
-                                    if student is None and rec.get('Surname', False) and rec.get('Forename', False) and len(date_of_birth) > 1:
+                                    if student is None and rec.get('Surname', False) and rec.get('Forenames', False) and len(date_of_birth) > 1:
                                         rec['Surname'] = rec['Surname'].strip()
-                                        rec['Forename'] = rec['Forename'].strip().split(' ')[0]
-                                        sid = rec['Surname'] + '_' + rec['Forename'] + '_' + date_of_birth
+                                        rec['Forenames'] = rec['Forenames'].strip().split(' ')[0]
+                                        sid = rec['Surname'] + '_' + rec['Forenames'] + '_' + date_of_birth
                                         if _students.get(sid,False):
                                             student = _students[sid]
                                         else:
                                             qry = { 'query': { 'bool': { 'must': [] } }, 'sort': {'created_date'+app.config['FACET_FIELD']: 'desc'} }
                                             qry['query']['bool']['must'].append({'match':{'last_name':{'query':rec['Surname'], 'fuzziness':0.8}}})
-                                            qry['query']['bool']['must'].append({'match':{'first_name':{'query':rec['Forename'], 'fuzziness':0.8}}})
+                                            qry['query']['bool']['must'].append({'match':{'first_name':{'query':rec['Forenames'], 'fuzziness':0.8}}})
                                             qry['query']['bool']['must'].append({'term':{'date_of_birth'+app.config['FACET_FIELD']:date_of_birth}})
                                             q = models.Student().query(q=qry)
                                             if q.get('hits',{}).get('total',0) != 0:
@@ -166,9 +166,9 @@ def index(model=None):
                                     _changed.append(student.id)
                                     updates.append('Updated student <a href="/admin/student/' + student.id + '">' + student.data['first_name'] + ' ' + student.data['last_name'] + '</a>')
                             else:
-                                failures.append('Could not find student ' + (rec['Personal Id'] if rec.get('Personal Id',False) else rec.get('Forename','') + ' ' + rec.get('Surname','')))
+                                failures.append('Could not find student ' + (rec['Personal Id'] if rec.get('Personal Id',False) else rec.get('Forenames','') + ' ' + rec.get('Surname','')))
                         except:
-                            failures.append('Failed to read student data for ' + (rec['Personal Id'] if rec.get('Personal Id',False) else rec.get('Forename','') + ' ' + rec.get('Surname','')))
+                            failures.append('Failed to read student data for ' + (rec['Personal Id'] if rec.get('Personal Id',False) else rec.get('Forenames','') + ' ' + rec.get('Surname','')))
 
                     _saved = 0
                     _tosave = []

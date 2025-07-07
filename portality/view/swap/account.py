@@ -62,7 +62,10 @@ def username(username):
     elif request.method == 'POST':
         if not auth.user.update(acc,current_user):
             abort(401)
-        info = request.json if request.json else request.values
+        try:
+            info = request.json
+        except:
+            info = request.values
         if info.get('id',False):
             if info['id'] != username:
                 acc = models.Account.pull(info['id'])

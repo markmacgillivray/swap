@@ -135,6 +135,7 @@ def index(model=None):
                                     "institution_code": rec['Provider code'].strip(),
                                     "institution_shortname": rec['Provider name'].strip(),
                                     "course_code": rec['Course code'].strip(),
+                                    "campus_code": rec['Campus code'].strip(),
                                     "start_year": rec['Year of entry'].strip()
                                 }
                                 if rec.get('Course placed',False):
@@ -152,7 +153,7 @@ def index(model=None):
                                 c = 0
                                 if 'applications' not in student.data: student.data['applications'] = []
                                 for ap in student.data['applications']:
-                                    if ap['institution_code'] == nap['institution_code'] and ap['course_code'] == nap['course_code'] and (ap['start_year'] == nap['start_year'] or nap['choice_number'] == 'Final'):
+                                    if (not ap.get('campus_code', False) or ap['campus_code'] == nap['campus_code']) and ap['institution_code'] == nap['institution_code'] and ap['course_code'] == nap['course_code'] and (ap['start_year'] == nap['start_year'] or nap['choice_number'] == 'Final'):
                                         which = c
                                         if nap['choice_number'] == 'Final':
                                             for k in ['institution_shortname']: #, 'start_year']:

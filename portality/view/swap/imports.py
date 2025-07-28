@@ -82,6 +82,13 @@ def index(model=None):
                     updates = []
                     failures = []
                     for rec in records:
+                        srec = {}
+                        for k in rec.keys():
+                            if ' ' in k:
+                                srec[k.strip()] = rec[k]
+                            else:
+                                srec[k] = rec[k]
+                        rec = srec
                         student = None
                         try:
                             if rec.get('Personal Id',False):
@@ -92,6 +99,7 @@ def index(model=None):
                                     qry = { 'query': { 'bool': { 'must': [] } }, 'sort': {'created_date'+app.config['FACET_FIELD']: 'desc'} }
                                     qry['query']['bool']['must'].append({'term':{'ucas_number'+app.config['FACET_FIELD']:rec['Personal Id']}})
                                     q = models.Student().query(q=qry)
+                                    print(q)
                                     if q.get('hits',{}).get('total',0) >= 1: # there can be older records with same UCAS number
                                         found = models.Student.pull(q['hits']['hits'][0]['_source']['id'])
                                         tid = found.data['last_name'] + '_' + found.data['first_name'] + '_' + found.data['date_of_birth']
@@ -167,9 +175,10 @@ def index(model=None):
                                     _changed.append(student.id)
                                     updates.append('Updated student <a href="/admin/student/' + student.id + '">' + student.data['first_name'] + ' ' + student.data['last_name'] + '</a>')
                             else:
-                                failures.append('Could not find student ' + (rec['Personal Id'] if rec.get('Personal Id',False) else rec.get('Forenames','') + ' ' + rec.get('Surname','')))
+                                #print(rec)
+                                failures.append('Could not find student ' + ((rec['Personal Id'] if rec.get('Personal Id',False) else rec.get('Forenames','') + ' ' + rec.get('Surname',''))))
                         except:
-                            failures.append('Failed to read student data for ' + (rec['Personal Id'] if rec.get('Personal Id',False) else rec.get('Forenames','') + ' ' + rec.get('Surname','')))
+                            failures.append('Failed to read student data for ' + ((rec['Personal Id'] if rec.get('Personal Id',False) else rec.get('Forenames','') + ' ' + rec.get('Surname',''))))
 
                     _saved = 0
                     _tosave = []

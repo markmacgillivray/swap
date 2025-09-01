@@ -134,7 +134,10 @@ class DomainObject(UserDict):
         r = self.send('post', 'doc', self.data['id'], self.data)
 
     def save_from_form(self,request):
-        newdata = request.json if request.json else request.values
+        try:
+            newdata = request.json
+        except:
+            newdata = request.values
         for k, v in newdata.items():
             if k not in ['submit']:
                 self.data[k] = v

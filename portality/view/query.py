@@ -44,10 +44,11 @@ def query(path='Record'):
                 abort(404)
     else:
         if request.method == "POST":
-            if request.json:
-                qs = request.json
-            else:
+            try:
+                qs = request.json # was it ever going to be json? Could be legacy
+            except:
                 qs = dict(request.form).keys()[-1]
+                #qs = request.values
         elif 'q' in request.values:
             qs = {'query': {'query_string': { 'query': request.values['q'] }}}
         elif 'source' in request.values:

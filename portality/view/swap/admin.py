@@ -43,7 +43,11 @@ def report():
 @blueprint.route('/settings', methods=['GET','POST'])
 def settings():
     if request.method == 'POST':
-        inputs = request.json
+        #inputs = request.json
+        try:
+            inputs = request.json
+        except:
+            inputs = request.values
         acc = models.Account.pull(app.config['SUPER_USER'][0])
         if 'settings' not in acc.data: acc.data['settings'] = {}
         for key in inputs.keys():

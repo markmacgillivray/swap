@@ -90,7 +90,7 @@ def index(model=None):
                                 srec[k] = rec[k]
                         rec = srec
                         student = None
-                        try:
+                        if True: #try:
                             if rec.get('Personal Id',False):
                                 rec['Personal Id'] = rec['Personal Id'].strip()
                                 if _students.get(rec['Personal Id'],False):
@@ -177,7 +177,7 @@ def index(model=None):
                             else:
                                 #print(rec)
                                 failures.append('Could not find student ' + ((rec['Personal Id'] if rec.get('Personal Id',False) else rec.get('Forenames','') + ' ' + rec.get('Surname',''))))
-                        except:
+                        else: #except:
                             failures.append('Failed to read student data for ' + ((rec['Personal Id'] if rec.get('Personal Id',False) else rec.get('Forenames','') + ' ' + rec.get('Surname',''))))
 
                     _saved = 0

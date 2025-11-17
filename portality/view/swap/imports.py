@@ -143,7 +143,7 @@ def index(model=None):
                                     "institution_code": rec['Provider code'].strip(),
                                     "institution_shortname": rec['Provider name'].strip(),
                                     "course_code": rec['Course code'].strip(),
-                                    "campus_code": rec['Campus code'].strip(),
+                                    "campus_code": rec.get('Campus code', rec.get('Campus', '')).strip(),
                                     "start_year": rec['Year of entry'].strip()
                                 }
                                 if rec.get('Course placed',False):
